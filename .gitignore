@@ -2,4 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+blogdown
+Thumbs.db
+public/
 matthew-parker.Rproj
