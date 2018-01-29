@@ -40,7 +40,7 @@ library(kableExtra)</code></pre>
 <p>I have downloaded the counts data into a .csv file, and will now load it into R using the following R code. You can see the data.frame is displayed in the table below.</p>
 <pre class="r"><code>dat &lt;- read.csv(here::here(&quot;data/bccdc/depression.csv&quot;), header = TRUE)
 
-colnames(dat) &lt;- c(&quot;Sites&quot;, 2010:2014)
+colnames(dat) &lt;- c(&quot;Sites&quot;, 2000:2014)
 
 kable(dat, &quot;html&quot;, caption = &quot;Reported Cases of Depression, VCHA Region&quot;) %&gt;%
   kable_styling() %&gt;%
@@ -56,6 +56,36 @@ kable(dat, &quot;html&quot;, caption = &quot;Reported Cases of Depression, VCHA 
 Sites
 </th>
 <th style="text-align:right;">
+2000
+</th>
+<th style="text-align:right;">
+2001
+</th>
+<th style="text-align:right;">
+2002
+</th>
+<th style="text-align:right;">
+2003
+</th>
+<th style="text-align:right;">
+2004
+</th>
+<th style="text-align:right;">
+2005
+</th>
+<th style="text-align:right;">
+2006
+</th>
+<th style="text-align:right;">
+2007
+</th>
+<th style="text-align:right;">
+2008
+</th>
+<th style="text-align:right;">
+2009
+</th>
+<th style="text-align:right;">
 2010
 </th>
 <th style="text-align:right;">
@@ -69,36 +99,6 @@ Sites
 </th>
 <th style="text-align:right;">
 2014
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
-</th>
-<th style="text-align:right;">
-NA
 </th>
 </tr>
 </thead>
