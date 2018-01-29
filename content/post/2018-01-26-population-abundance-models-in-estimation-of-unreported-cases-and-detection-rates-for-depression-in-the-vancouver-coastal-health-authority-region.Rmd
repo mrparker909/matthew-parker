@@ -48,7 +48,7 @@ I have downloaded the counts data into a .csv file, and will now load it into R 
 ```{r load-data}
 dat <- read.csv(here::here("data/bccdc/depression.csv"), header = TRUE)
 
-colnames(dat) <- c("Sites", 2010:2014)
+colnames(dat) <- c("Sites", 2000:2014)
 
 kable(dat, "html", caption = "Reported Cases of Depression, VCHA Region") %>%
   kable_styling() %>%
