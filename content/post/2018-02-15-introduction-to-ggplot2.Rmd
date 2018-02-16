@@ -17,7 +17,7 @@ Getting bored with the plots you can make using the base R _plot_? Probably time
 
 You can read through this article, or you can watch the tutorial video below (or both!).
 
-<iframe width="560" height="315" src="http://www.youtube.com/embed/xZOhepWLzxQ" frameborder="0" allow="encrypted-media" allowfullscreen></iframe>
+<iframe width="560" height="315" src="http://www.youtube.com/embed/xZOhepWLzxQ" frameborder="0"></iframe>
 
 Let's get started. If you haven't used ggplot before, you will need to install that package by running this either in the R console, or in an R script:
 
