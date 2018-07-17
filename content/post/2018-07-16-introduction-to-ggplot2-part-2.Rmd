@@ -22,22 +22,22 @@ You can read through this article, or you can watch the tutorial video below (or
 
 <iframe width="560" height="315" src="//www.youtube.com/embed/sZRTkEtAdRA" frameborder="0"></iframe>
 
-Let's get started. First load the ggplot2 library, since thats what we're here to learn!
+Let's get started. First load the _ggplot2_ library, since thats what we're here to learn!
 
 ```{r loadlib, message=FALSE, error=FALSE, warning=FALSE}
 library(ggplot2)
 ```
 
 
-We're going to be looking at the msleep dataset (same one we were looking at 
-<a href="/post/2018-02-15-introduction-to-ggplot2/">in the last tutorial</a>
+We're going to be looking at the _msleep_ dataset (same one we were looking at 
+<a href="/post/introduction-to-ggplot2/">in the last tutorial</a>
 )
 
 ```{r lookatdata, message=FALSE, error=FALSE, warning=FALSE}
 sleep <- ggplot2::msleep
 ```
 
-We're interested in exploring the linear relationship between log(brain weights) and total sleep. In light of this, let's make a new data.frame for those pieces of data.
+We're interested in exploring the linear relationship between _log(brain weights)_ and _total sleep_. In light of this, let's make a new _data.frame_ for those pieces of data.
 
 ```{r setupdata1}
 data <- data.frame(log_bw=log(sleep$brainwt), st=sleep$sleep_total)
@@ -45,7 +45,7 @@ summary(data)
 ```
 
 
-As you can see from the summary, there are missing (NA) values in log_bw. Let's get rid of those using the which() function.
+As you can see from the summary, there are missing (NA) values in _log\_bw_. Let's get rid of those using the _which()_ function.
 
 
 ```{r setupdata2}
@@ -53,7 +53,7 @@ data_clean <- data[which(!is.na(data$log_bw)),]
 summary(data_clean)
 ```
 
-Now the summary shows that we have no missing values, let's move on. Let's print a quick scatter plot of the data (just like we did in the previous tutorial). The only new thing here is the call to theme_bw(). This is an example of using themes to change the general feel of the plot. Play around with other themes or even create your own!
+Now the summary shows that we have no missing values, let's move on. Let's print a quick scatter plot of the data (just like we did in the previous tutorial). The only new thing here is the call to _theme\_bw()_. This is an example of using themes to change the general feel of the plot. Play around with other themes or even create your own!
 
 ```{r scatterplot1}
 g1 <- ggplot(data=data_clean) +
@@ -62,14 +62,14 @@ g1 <- ggplot(data=data_clean) +
 g1
 ```
 
-You can see that there is some linear trend in the plot, and a linear regression may be appropriate to fit a "best fit" line. We will the function lm(), which performs an ordinary least squares regression. In this case we have log_bw as our dependent (response) variable, and st as our independent variable. Note that the "+0" indicates that we do not want an intercept term in our regression (so the intercept is forced to be the point (0,0)). This choice was made arbitrarily, and in a real analysis you would need to worry about justifying that choice.
+You can see that there is some linear trend in the plot, and a linear regression may be appropriate to fit a "best fit" line. We will the function _lm()_, which performs an ordinary least squares regression. In this case we have _log\_bw_ as our dependent (response) variable, and _st_ as our independent variable. Note that the "+ 0" indicates that we do not want an intercept term in our regression (so the intercept is forced to be the point _(0,0)_). This choice was made arbitrarily, and in a real analysis you would need to worry about justifying that choice.
 
 ```{r linearmodel1}
 mod1 <- lm(formula = log_bw ~ st + 0, data = data_clean)
 s <- summary(mod1)
 ```
 
-Let's take the output from the linear regression, and put it into a data.frame so that we can use it easily with ggplot.
+Let's take the output from the linear regression, and put it into a _data.frame_ so that we can use it easily with _ggplot_.
 
 ```{r setupdata3}
 data_mod1 <- data.frame(x = mod1$model$st, y_fit = mod1$fitted.values)
@@ -85,7 +85,7 @@ g2 <- g1 + geom_line(data   = data_mod1, aes(x = x, y = y_fit),
 g2
 ```
 
-Adding standard error lines is very similar, and we'll make use of the standard error already calculated and stored in the model summary. We'll set the geom_point to have an alpha of 0.5, this will allow the points to fade into the backdrop, and bring out the regression line, which we want to be the visual focus of the plot. We will also use linetype = 2 in order to allow the standard error lines to have a dashed style.
+Adding standard error lines is very similar, and we'll make use of the standard error already calculated and stored in the model summary. We'll set the _geom\_point_ to have an alpha of 0.5, this will allow the points to fade into the backdrop, and bring out the regression line, which we want to be the visual focus of the plot. We will also use _linetype = 2_ in order to allow the standard error lines to have a dashed style.
 
 
 ```{r scatterplot3}
@@ -123,7 +123,7 @@ g4 <- g3 + geom_point(data   = data_outs, aes(x = st, y = log_bw),
 g4
 ```
 
-Let's shade in the region between the standard error lines, purely for the joy of shading areas of a plot. We'll do this using geom_ribbon, and while we're at it we'll add prettier labels and a plot title.
+Let's shade in the region between the standard error lines, purely for the joy of shading areas of a plot. We'll do this using _geom\_ribbon_, and while we're at it we'll add prettier labels and a plot title.
 
 ```{r scatterplot5}
 g4 + geom_ribbon(data  = data_mod1, aes(x   = x,
@@ -136,7 +136,7 @@ g4 + geom_ribbon(data  = data_mod1, aes(x   = x,
   ylab("log(Brain Weight) (kg)")
 ```
 
-That concludes this tutorial lesson on ggplot2. Now go make some beautiful graphs! Tweet them @mrparker9090 with the hashtag \#PrettyPlotsPlease.
+That concludes this tutorial lesson on _ggplot2_. Now go make some beautiful graphs! Tweet them __@mrparker9090__ with the hashtag __\#PrettyPlotsPlease__.
 
 
 
