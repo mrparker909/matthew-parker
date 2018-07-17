@@ -62,7 +62,7 @@ g1 <- ggplot(data=data_clean) +
 g1
 ```
 
-You can see that there is some linear trend in the plot, and a linear regression may be appropriate to fit a "best fit" line. We will the function _lm()_, which performs an ordinary least squares regression. In this case we have _log\_bw_ as our dependent (response) variable, and _st_ as our independent variable. Note that the "+ 0" indicates that we do not want an intercept term in our regression (so the intercept is forced to be the point _(0,0)_). This choice was made arbitrarily, and in a real analysis you would need to worry about justifying that choice.
+You can see that there is some linear trend in the plot, and a linear regression may be appropriate to fit a "best fit" line. We will use the function _lm()_, which performs an ordinary least squares regression. In this case we have _log\_bw_ as our dependent (response) variable, and _st_ as our independent variable. Note that the "+ 0" indicates that we do not want an intercept term in our regression (so the intercept is forced to be the point _(0,0)_). This choice was made arbitrarily, and in a real analysis you would need to worry about justifying that choice.
 
 ```{r linearmodel1}
 mod1 <- lm(formula = log_bw ~ st + 0, data = data_clean)
@@ -136,7 +136,7 @@ g4 + geom_ribbon(data  = data_mod1, aes(x   = x,
   ylab("log(Brain Weight) (kg)")
 ```
 
-That concludes this tutorial lesson on _ggplot2_. Now go make some beautiful graphs! Tweet them __@mrparker9090__ with the hashtag __\#PrettyPlotsPlease__.
+That concludes this tutorial lesson on _ggplot2_. Now go make some beautiful graphs! Tweet them __ @mrparker9090 __ with the hashtag __\#PrettyPlotsPlease__.
 
 
 
