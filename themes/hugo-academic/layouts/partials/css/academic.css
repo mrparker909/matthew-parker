@@ -34,12 +34,12 @@ html {
 
 body {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.75rem;
   line-height: inherit;
   color: inherit;
   background-color: {{ .Get "background" }};
   margin-top: 71px; /* Offset body content by navbar height. */
-  padding-top: 0;
+  padding-top: 0px;
   counter-reset: captions;
 }
 @media screen and (max-width: 1200px) { /* Match max-width of .nav-bar query. */
@@ -50,14 +50,14 @@ body {
 
 /* Body text */
 p {
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin-top: .3;
+  margin-bottom: 1.5rem;
 }
 
 /* Lists */
 ul, ol, dl {
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin-top: 0.3;
+  margin-bottom: 1.5rem;
 }
 
 /* Navigation bar text */
@@ -72,27 +72,27 @@ ul, ol, dl {
 h1, h2, h3, h4, h5, h6 {
   font-family: '{{ .Get "heading_font" }}', sans-serif;
   font-weight: 400;
-  margin-bottom: .5rem;
+  margin-bottom: 0.25rem;
   line-height: 1.25;
   color: #313131;
   text-rendering: optimizeLegibility;
 }
 h1 {
-  font-size: 2.25rem;
+  font-size: 1.5rem;
 }
 h2 {
   margin-top: 1rem;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 h3 {
   font-weight: 700;
   margin-top: 1.5rem;
-  font-size: 1.25rem;
+  font-size: 1.00rem;
 }
 h4, h5, h6 {
   font-weight: 700;
   margin-top: 1rem;
-  font-size: 1rem;
+  font-size: 0.75rem;
 }
 
 a,
@@ -557,7 +557,7 @@ article {
 
 .article-container {
   max-width: 760px;
-  padding: 1rem 20px 0 20px;
+  padding: 0.1rem 20px 0 20px;
   margin: 0 auto 0 auto;
 }
 
@@ -597,7 +597,7 @@ article {
 }
 
 .article-title {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 .article-title a {
@@ -933,8 +933,8 @@ article {
  **************************************************/
 
 footer {
-  margin: 4rem 0 0;
-  padding: 2rem 0;
+  margin: 0rem 0 0;
+  padding: 0rem 0;
   width: 100%;
 }
 

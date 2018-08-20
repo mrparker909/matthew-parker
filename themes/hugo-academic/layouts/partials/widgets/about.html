@@ -58,8 +58,8 @@
     <div class="row">
 
       {{ with $page.Params.interests }}
-      <div class="col-sm-5">
-        <h3>{{ i18n "interests" | markdownify }}</h3>
+      <div class="col-sm-6">
+        <h4>{{ i18n "interests" | markdownify }}</h4>
         <ul class="ul-interests">
           {{ range .interests }}
           <li>{{ . | markdownify }}</li>
@@ -69,8 +69,8 @@
       {{ end }}
 
       {{ with $page.Params.education }}
-      <div class="col-sm-7">
-        <h3>{{ i18n "education" | markdownify }}</h3>
+      <div class="col-sm-6">
+        <h4>{{ i18n "education" | markdownify }}</h4>
         <ul class="ul-edu fa-ul">
           {{ range .courses }}
           <li>
@@ -84,7 +84,41 @@
         </ul>
       </div>
       {{ end }}
+    </div>
+  <div class="row">
+      {{ with $page.Params.awards }}
+      <div class="col-sm-6">
+        <h4>{{ i18n "awards" | markdownify }}</h4>
+        <ul class="ul-edu fa-ul">
+          {{ range .scholarship }}
+          <li>
+            <i class="fa-li fa fa-trophy"></i>
+            <div class="description">
+              <p class="award">{{ .award }}{{ with .year }}, {{ . }}{{ end }}</p>
+              <p class="amount">{{ .amount }}</p>
+            </div>
+          </li>
+          {{ end }}
+        </ul>
+      </div>
+      {{ end }}
 
+      {{ with $page.Params.funding }}
+      <div class="col-sm-6">
+        <h4>{{ i18n "funding" | markdownify }}</h4>
+        <ul class="ul-edu fa-ul">
+          {{ range .scholarship }}
+          <li>
+            <i class="fa-li fa fa-money"></i>
+            <div class="description">
+              <p class="award">{{ .award }}{{ with .year }}, {{ . }}{{ end }}</p>
+              <p class="amount">{{ .amount }}</p>
+            </div>
+          </li>
+          {{ end }}
+        </ul>
+      </div>
+      {{ end }}
     </div>
   </div>
 </div>

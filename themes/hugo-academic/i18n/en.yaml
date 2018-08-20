@@ -65,7 +65,13 @@
 
 - id: education
   translation: Education
+  
+- id: awards
+  translation: Awards
 
+- id: funding
+  translation: Funding
+  
 # Publications widget
 
 - id: more_publications
