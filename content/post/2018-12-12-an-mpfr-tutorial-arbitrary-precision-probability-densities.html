@@ -162,26 +162,26 @@ optim(par=c(10000), fn = L, method=&quot;Brent&quot;, lower=0, upper=100000, obs
 ## $message
 ## NULL</code></pre>
 <pre class="r"><code># Rmpfr optimizeR
-optimizeR(f = L_apa, lower = 0, upper = 100000, method = &quot;Brent&quot;, obs=x)</code></pre>
-<pre><code>## $minimum
+optimizeR(f = L_apa, lower = 0, upper = 100000, method = &quot;Brent&quot;, maximum=TRUE, obs=x)</code></pre>
+<pre><code>## $maximum
 ## 1 &#39;mpfr&#39; number of precision  132   bits 
-## [1] 99999.9999999999999989509571426832067835
+## [1] 9912.920792079207931132415194337319594856
 ## 
 ## $objective
 ## 1 &#39;mpfr&#39; number of precision  100   bits 
-## [1] 1.506406340107169931008831319321e-2952462
+## [1] -6.575056585725542566654793125118e-4351
 ## 
 ## $iter
-## [1] 432
+## [1] 35
 ## 
 ## $convergence
 ## [1] TRUE
 ## 
 ## $estim.prec
 ## 1 &#39;mpfr&#39; number of precision  132   bits 
-## [1] 1.024523095325062570397351721535880869084e-15
+## [1] 1.527999260997503838156652850858163755956e-16
 ## 
 ## $method
 ## [1] &quot;Brent&quot;</code></pre>
-<p>Interpreting the results above, regular <tt>optim</tt> was unable to converge, while the <tt>optimizeR</tt> gives an estimate of 99999.99…, which rounds to 10000. Since we generated the data ourselves, we know that the true value of <span class="math inline">\(\lambda\)</span> is actually 10000, so we have successfully optimized the likelihood with arbitrary precision arithmetic.</p>
+<p>Interpreting the results above, regular <tt>optim</tt> was unable to converge, while the <tt>optimizeR</tt> gives an estimate of <span class="math inline">\(\hat \lambda=9912.92\dots\)</span>; and since we generated the data ourselves, we know that the true value of <span class="math inline">\(\lambda\)</span> is actually 10000, very close to the estimated value (especially since we biased the data by adding the outlier). We have successfully optimized the likelihood with arbitrary precision arithmetic.</p>
 </div>

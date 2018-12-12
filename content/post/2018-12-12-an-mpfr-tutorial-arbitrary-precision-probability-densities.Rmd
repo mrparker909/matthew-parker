@@ -15,6 +15,7 @@ header:
 ---
 
 ```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
+set.seed(12345)
 library(ggplot2)
 library(Rmpfr)
 ```
@@ -142,10 +143,10 @@ Now we will try to optimize the two likelihoods to estimate $\lambda$:
 optim(par=c(10000), fn = L, method="Brent", lower=0, upper=100000, obs=x)
 
 # Rmpfr optimizeR
-optimizeR(f = L_apa, lower = 0, upper = 100000, method = "Brent", obs=x)
+optimizeR(f = L_apa, lower = 0, upper = 100000, method = "Brent", maximum=TRUE, obs=x)
 ```
 
-Interpreting the results above, regular <tt>optim</tt> was unable to converge, while the <tt>optimizeR</tt> gives an estimate of 99999.99..., which rounds to 10000. Since we generated the data ourselves, we know that the true value of $\lambda$ is actually 10000, so we have successfully optimized the likelihood with arbitrary precision arithmetic.
+Interpreting the results above, regular <tt>optim</tt> was unable to converge, while the <tt>optimizeR</tt> gives an estimate of $\hat \lambda=9912.92\dots$; and since we generated the data ourselves, we know that the true value of $\lambda$ is actually 10000, very close to the estimated value (especially since we biased the data by adding the outlier). We have successfully optimized the likelihood with arbitrary precision arithmetic.
 
 
 
