@@ -136,13 +136,11 @@ x &lt;- c(rpois(n = 100, lambda = 10000), 100)
 
 # likelihood function with arbitrary precision arithmetic
 L_apa &lt;- function(lambda, obs, prec=100) {
-  N &lt;- length(obs)
   return(prod(dpois_apa(x = obs, lambda = lambda, prec = prec)))
 }
 
 # likelihood function with regular R arithmetic
 L &lt;- function(lambda, obs) {
-  N &lt;- length(obs)
   return(prod(dpois(x = obs, lambda = lambda)))
 }</code></pre>
 <p>Now we will try to optimize the two likelihoods to estimate <span class="math inline">\(\lambda\)</span>:</p>
@@ -167,11 +165,11 @@ optim(par=c(10000), fn = L, method=&quot;Brent&quot;, lower=0, upper=100000, obs
 optimizeR(f = L_apa, lower = 0, upper = 100000, method = &quot;Brent&quot;, obs=x)</code></pre>
 <pre><code>## $minimum
 ## 1 &#39;mpfr&#39; number of precision  132   bits 
-## [1] 99999.99999999999999895217557090834977518
+## [1] 99999.9999999999999989509571426832067835
 ## 
 ## $objective
 ## 1 &#39;mpfr&#39; number of precision  100   bits 
-## [1] 7.033812157803700363844353909137e-2951042
+## [1] 1.506406340107169931008831319321e-2952462
 ## 
 ## $iter
 ## [1] 432
@@ -181,7 +179,7 @@ optimizeR(f = L_apa, lower = 0, upper = 100000, method = &quot;Brent&quot;, obs=
 ## 
 ## $estim.prec
 ## 1 &#39;mpfr&#39; number of precision  132   bits 
-## [1] 1.02391388121249107455773421019649796181e-15
+## [1] 1.024523095325062570397351721535880869084e-15
 ## 
 ## $method
 ## [1] &quot;Brent&quot;</code></pre>

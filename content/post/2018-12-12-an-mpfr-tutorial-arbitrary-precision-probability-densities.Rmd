@@ -126,13 +126,11 @@ x <- c(rpois(n = 100, lambda = 10000), 100)
 
 # likelihood function with arbitrary precision arithmetic
 L_apa <- function(lambda, obs, prec=100) {
-  N <- length(obs)
   return(prod(dpois_apa(x = obs, lambda = lambda, prec = prec)))
 }
 
 # likelihood function with regular R arithmetic
 L <- function(lambda, obs) {
-  N <- length(obs)
   return(prod(dpois(x = obs, lambda = lambda)))
 }
 ```
