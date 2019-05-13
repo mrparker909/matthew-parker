@@ -1,0 +1,160 @@
+---
+title: 'Simulation Studies: What? Why? How?'
+author: Matthew Parker
+date: '2019-05-13'
+slug: simulation-studies-what-why-how
+categories:
+  - R
+  - Probability
+  - Statistics
+tags:
+  - simulations
+  - parameter properties
+  - randomization
+  - bias
+  - variance
+header:
+  caption: ''
+  image: ''
+---
+
+Sometimes you know more about modelling the population you are studying than you do about the parameters feeding your models. Suppose your population has unknown birth rate $\gamma$, and survival probability $\omega$. You have a model incorporating these two parameters. You can use your model and data observations to estimate $\gamma$ and $\omega$. But how precise are these estimates? Are they biased? How many observations should you collect? Simulation studies are here to help answer those questions!
+
+# What is a simulation study
+
+A simulation study is a method of investigating the properties of a statistical model, usually before you collect data on your population. It is useful for experimental design (choosing an appropriate sample size), and for better understanding the limitations of your model through parameter bias and variability.
+
+There are four key components to a simulation study
+
+1. A Statistical Model
+2. Simulation Scope
+3. Generating Randomized Populations
+4. Parameter Estimation
+
+## 1. A Statistical Model
+
+In general, to perform a simulation study, you need a parametric model. A parametric model is a function of your data and your parameters, generally a probability function or a likelihood. For example, if you have a set of $n$ observations $\vec{x}=\{x_1, x_2, \cdots, x_n\}$, with a single population paramter $\theta$, then the form of your parametric model would be:
+
+\[
+  f(\theta \mid \vec{x})
+\]
+
+Where $f$ is a function of the population parameter, given a set of observed data. At this point, we have a parametric model, and a parameter of interest. However we have not yet performed an experiment to obtain $\vec{x}$. We instead want to investigate $\theta$ first, to help us with planning the experiment. This is done using randomization.
+
+## 2. Simulation Scope
+
+The scope of your simulation is the set of limitations and boundaries which you are exploring. For example, you might only care about simulations for a particular sample size $n$. Or you may need to compare simulation results for a range of values of $n$. Likewise for your parameter of interest $\theta$, you may want to generate random values of $\theta$ from a prior distribution, or you may have a range of values incrementing linearly. Regardless, you need to settle on the scope for your particular simulation study.
+
+## 3. Generating Randomized Populations
+
+What generating scheme you choose will depend on what your goal is (and on your scope). In general, you need to decide what values are fixed, what values are random, and how to randomize those values. These choices are NOT arbitrary, and you should always discuss these choices and the potential ramifications of those choices. 
+
+What will be randomized every time is the "observed" sample. Of course this is not a truly observed sample, but a generated sample. These samples are generated for each combination of $n$ and $\theta$, using the statistical model $f(\theta \mid \vec{x})$.
+
+Finally you need to decide on a simulation study size $M$, how many simulated observations you will have for each set of values (in this case, each choice of $n$ and $\theta$). A reasonable simulation size might be $M=1000$.
+
+## 4. Parameter Estimation
+
+Let's assume that you have chosen $n$ to be from the set $\{n_1, n_2, \cdots, n_{max}\}$, and $\theta$ from the set $\{\theta_1, \theta_2, \cdots, \theta_{max}\}$.
+
+You have generated a whole bunch of simulated observations, for which you can get parameter estimates:
+
+### Example Simulation Algorithm
+
+* for $n$ in $\{n_1, n_2, \cdots, n_{max}\}$:
+    + for $\theta$ in $\{\theta_1, \theta_2, \cdots, \theta_{max}\}$:
+        + for $m$ in $1,2,3,\cdots,M$:
+            + generate a randomized sample $x_{n,\theta,m}$
+            + perform model fitting (for example maximum likelihood estimation) to obtain $M$ parameter estimates $\hat{\theta}_{n,\theta,m}$ from the sample.
+
+Now for each $n$ and each $\theta$, you have $M$ estimates for your parameter.
+
+You can, for example, calculate the variance of $\hat{\theta}_{n,\theta}$ for each $n$ and $\theta$: $\displaystyle Var[\hat{\theta}_{n,\theta}]= \frac{1}{M-1} \sum_{m=1}^{M} (\hat{\theta}_{n,\theta,m} - \theta)^2$. Or you can calculate the bias: $\displaystyle E[\hat\theta_{n,\theta}]-\theta=\frac{1}{M}\sum_{m=1}^{M}\hat{\theta}_{n,\theta,m} -\theta$
+
+
+# When/Why should you use a simulation study
+
+Here are some possible questions you might be investigating:
+
+* how large should our sample size $n$ be to control the parameter variance?
+* is our model robust against small deviations to the parametric model?
+* is the parameter estimate biased?
+* what is the variance of the estimated parameter under particular conditions?
+* what is the empirical distribution of the estimated parameter?
+
+Sometimes these questions are better answered through mathematical statistics methods, where derivations can provide definitive answers. However all too often, the models involved are far too complex for those approaches. In that case we can use simulations to gain insight.
+
+# How to perform a simulation study (in R)
+
+Let us consider a very simple illustrative example. We have a Poisson parametric model:
+
+\[
+   f(\theta\mid\vec{x}) = \prod_{i=1}^n Poisson(\theta; x_i)
+\]
+
+Given this model, we want to choose $n$ so that when estimating $\theta$, we have $Var[\hat\theta] < 0.01\times E[\hat\theta]$. For simplicity we will consider $\theta$ to be a constant, $\theta=7$.
+
+```{r}
+# set random number seed for reproducible results
+set.seed(1)
+
+# set theta
+theta <- 7
+
+# set simulation options
+n_options <- seq(10, 100, 10)
+M         <- 100
+
+# empty array to hold our simulation results
+theta_hat <- array(dim=c(length(n_options),M))
+
+# negative log likelihood function
+nLL <- function(par, x) {
+  -1*sum(dpois(x, lambda = par, log=TRUE))
+}
+
+# run simulation
+for(n in n_options) {
+  n_index <- which(n_options==n)
+  for(m in 1:M) {
+    # generate sample of size n
+    samp <- rpois(n = n, lambda = theta)
+  
+    # calculate theta estimate using maximum likelihood estimation
+    theta_hat[n_index,m] <- optim(par = c(5), 
+                                  fn = nLL, 
+                                  method = "BFGS", 
+                                  x=samp)$par
+  }
+}
+
+```
+
+So what does theta_hat look like? Let's look at the first row, corresponding to $n_1=10$:
+
+```{r}
+theta_hat[1,]
+```
+
+So for $n_1=10$, we have $M=100$ estimates for $\theta_{n_1}$. For this one sample size, the variance and the bias are calculated like this:
+
+```{r}
+# variance
+var(theta_hat[1,])
+# bias
+mean(theta_hat[1,]) - theta
+```
+
+But we can also calculate these for each value of $n$:
+
+```{r}
+variances <- apply(theta_hat, 1, var)
+biases    <- apply(theta_hat, 1, function(x){mean(x)-theta})
+means     <- apply(theta_hat, 1, mean)
+
+data.frame(n = n_options, Mean=means, Var=variances, Bias=biases, Condition=variances<0.01*means)
+```
+
+So in order to control the variance under the condition that the variance be less than 1\% of the expected value, we would choose $n$ to be at least 90. The precision of our simulation study is determined by the choice of $M$, and so larger values of $M$ are much preferred and can be very influential to the results if not chosen to be large enough.
+
+We chose $M=100$, for simplicity; however $M=1000$, or even larger, is likely to give better results. When possible, the simulation should be run with several increasing values of $M$ in order to determine whether the results are stable.
