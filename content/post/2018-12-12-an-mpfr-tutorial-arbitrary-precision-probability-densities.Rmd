@@ -26,7 +26,7 @@ Working on a likelihood function that relies on the Poisson distribution with la
 
 ## The Problem
 
-Let's take a look at the Poisson distribution for increasing $\lambda$.
+Performing calculations with very small numbers can lead to imprecise results. Often, small numbers will be truncated to zero in computer calculations, and this can have serious implications for scientific research. Let's take a look at the Poisson distribution for increasing $\lambda$.
 
 ```{r couple-of-poisson, echo=TRUE, message=FALSE, fig.width=10, fig.height=3.25}
 x1 <- 0:20
@@ -59,7 +59,7 @@ You can see that as $\lambda$ increases in size, the probability of observations
 
 ## Libraries
 
-One solution to this is to use Arbitrary Precision Arithmetic (APA). Essentially we want to capture the non-zero probabilities even when they are too small for the computer to store as a single number. To accomplish this we will use the library <tt>Rmpfr</tt> to do APA.
+One solution to this problem is to use Arbitrary Precision Arithmetic (APA). Essentially we want to capture the non-zero probabilities even when they are too small for the computer to store as a single number. To accomplish this we will use the library <tt>Rmpfr</tt> to do APA.
 
 ```{r install-lib-mpfr, eval=FALSE}
 install.packages("Rmpfr")
@@ -86,7 +86,7 @@ num2 <- 1/(num^1000)
 
 ## Arbitrary Precision Poisson Distribution
 
-Now we need to create a function that calculates the Poisson density for arbitrary precision.
+Now we need to create a function that calculates the Poisson density using arbitrary precision.
 
 ```{r our-poisson}
 dpois_apa <- function(x, lambda, prec) {
@@ -107,7 +107,7 @@ sum(dpois(x = 0:100, lambda = 900))
 sum(dpois_apa(x = 0:100, lambda = 900, prec = 100))
 ```
 
-Looks good, now let's try with larger lambda (where we have been running into the underflow issue):
+Looks good, you can see that they are identical up until the 6th decimal location. Now let's try with larger lambda (where we have been running into the underflow issue):
 
 ```{r comparison2}
 sum(dpois(x = 0:1000, lambda = 10000))

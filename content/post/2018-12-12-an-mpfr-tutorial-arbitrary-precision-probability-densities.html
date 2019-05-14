@@ -22,7 +22,7 @@ header:
 </div>
 <div id="the-problem" class="section level2">
 <h2>The Problem</h2>
-<p>Let’s take a look at the Poisson distribution for increasing <span class="math inline">\(\lambda\)</span>.</p>
+<p>Performing calculations with very small numbers can lead to imprecise results. Often, small numbers will be truncated to zero in computer calculations, and this can have serious implications for scientific research. Let’s take a look at the Poisson distribution for increasing <span class="math inline">\(\lambda\)</span>.</p>
 <pre class="r"><code>x1 &lt;- 0:20
 y1 &lt;- dpois(x = x1, lambda = 10)
 x2 &lt;- 50:150
@@ -84,7 +84,7 @@ knitr::kable(x = data.frame(Lambda=lam, Quantile=0.90*lam, Probability=p), digit
 </div>
 <div id="libraries" class="section level2">
 <h2>Libraries</h2>
-<p>One solution to this is to use Arbitrary Precision Arithmetic (APA). Essentially we want to capture the non-zero probabilities even when they are too small for the computer to store as a single number. To accomplish this we will use the library <tt>Rmpfr</tt> to do APA.</p>
+<p>One solution to this problem is to use Arbitrary Precision Arithmetic (APA). Essentially we want to capture the non-zero probabilities even when they are too small for the computer to store as a single number. To accomplish this we will use the library <tt>Rmpfr</tt> to do APA.</p>
 <pre class="r"><code>install.packages(&quot;Rmpfr&quot;)
 library(Rmpfr)</code></pre>
 <div id="rmpfr-basics" class="section level3">
@@ -104,7 +104,7 @@ print(num)</code></pre>
 </div>
 <div id="arbitrary-precision-poisson-distribution" class="section level2">
 <h2>Arbitrary Precision Poisson Distribution</h2>
-<p>Now we need to create a function that calculates the Poisson density for arbitrary precision.</p>
+<p>Now we need to create a function that calculates the Poisson density using arbitrary precision.</p>
 <pre class="r"><code>dpois_apa &lt;- function(x, lambda, prec) {
   # create arbitrary precision arithmetic numbers
   x_apa &lt;- mpfr(x, precBits = prec)
@@ -119,7 +119,7 @@ print(num)</code></pre>
 <pre class="r"><code>sum(dpois_apa(x = 0:100, lambda = 900, prec = 100))</code></pre>
 <pre><code>## 1 &#39;mpfr&#39; number of precision  100   bits 
 ## [1] 4.368158972674260090678233034232e-254</code></pre>
-<p>Looks good, now let’s try with larger lambda (where we have been running into the underflow issue):</p>
+<p>Looks good, you can see that they are identical up until the 6th decimal location. Now let’s try with larger lambda (where we have been running into the underflow issue):</p>
 <pre class="r"><code>sum(dpois(x = 0:1000, lambda = 10000))</code></pre>
 <pre><code>## [1] 0</code></pre>
 <pre class="r"><code>sum(dpois_apa(x = 0:1000, lambda = 10000, prec = 100))</code></pre>
