@@ -1,5 +1,5 @@
 ---
-title: 'An RMPFR Tutorial (Arbitrary Precision Probability Densities) '
+title: 'An RMPFR Tutorial (Arbitrary Precision Probability Densities)'
 author: Matthew Parker
 date: '2018-12-12'
 slug: an-mpfr-tutorial-arbitrary-precision-probability-densities
@@ -11,7 +11,7 @@ tags:
   - arbitrary precision arithmetic
 header:
   caption: ''
-  image: ''
+  image: '../../img/poisson_dist_apa.png'
 ---
 
 ```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
@@ -19,8 +19,6 @@ set.seed(12345)
 library(ggplot2)
 library(Rmpfr)
 ```
-
-## Summary
 
 Working on a likelihood function that relies on the Poisson distribution with large mean $\lambda$, I ran into the problem of underflow! Underflow occurs when a number is too small to be stored in memory, and so it is truncated to be equal to zero. In my case, the probabilities are so small in the tails of the distribution, that the probabilities return as 0 (although there is a non-zero probability in those tails). This may not seem like a problem (close to zero is basically zero right?), however, when you are running an optimizer such as <tt>optim</tt>, the optimizer can get stuck in the tails of the distribution, where a flat likelihood prevents any updates to the parameters from occuring.
 
