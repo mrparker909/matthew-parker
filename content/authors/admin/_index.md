@@ -18,9 +18,6 @@ interests:
 - Math, Physics, Astronomy
 name: Matthew Parker
 organizations:
-- name: University of British Columbia (research student)
-- name: University of Winnipeg (VADA training program)
-- name: University of Victoria (graduate student)
 
 social:
 - icon: envelope
@@ -29,9 +26,9 @@ social:
 - icon: twitter
   icon_pack: fab
   link: https://twitter.com/mrparker9090
-- icon: linked-in
-  icon_pack: ai
-  link: www.linkedin.com/in/matthew-parker-b83b29108
+- icon: linkedin
+  icon_pack: fab
+  link: https://www.linkedin.com/in/matthew-parker-b83b29108/
 - icon: github
   icon_pack: fab
   link: https://github.com/mrparker909
