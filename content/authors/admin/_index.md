@@ -1,48 +1,46 @@
 ---
 authors:
 - admin
-bio: My research interests include distributed robotics, mobile computing and programmable
-  matter.
+bio: 
 education:
   courses:
-  - course: PhD in Artificial Intelligence
-    institution: Stanford University
-    year: 2012
-  - course: MEng in Artificial Intelligence
-    institution: Massachusetts Institute of Technology
-    year: 2009
-  - course: BSc in Artificial Intelligence
-    institution: Massachusetts Institute of Technology
-    year: 2008
-email: ""
+  - course: MSc in Statistics
+    institution: University of Victoria
+    year: in progress
+  - course: BSc in Physics and Mathematics
+    institution: University of Victoria
+    year: 2015
+email: "mrparker909@gmail.com"
 interests:
-- Artificial Intelligence
-- Computational Linguistics
-- Information Retrieval
-name: Nelson Bighetti
+- Statistical Modelling
+- R, Tidyverse, Data Science
+- Machine Learning
+- Math, Physics, Astronomy
+name: Matthew Parker
 organizations:
-- name: Stanford University
-  url: ""
-role: Professor of Artificial Intelligence
+- name: University of British Columbia (research student)
+- name: University of Winnipeg (VADA training program)
+- name: University of Victoria (graduate student)
+
 social:
 - icon: envelope
   icon_pack: fas
   link: '#contact'
 - icon: twitter
   icon_pack: fab
-  link: https://twitter.com/GeorgeCushen
-- icon: google-scholar
+  link: https://twitter.com/mrparker9090
+- icon: linked-in
   icon_pack: ai
-  link: https://scholar.google.co.uk/citations?user=sIwtMXoAAAAJ
+  link: www.linkedin.com/in/matthew-parker-b83b29108
 - icon: github
   icon_pack: fab
-  link: https://github.com/gcushen
+  link: https://github.com/mrparker909
 superuser: true
 user_groups:
 - Researchers
 - Visitors
 ---
 
-Nelson Bighetti is a professor of artificial intelligence at the Stanford AI Lab. His research interests include distributed robotics, mobile computing and programmable matter. He leads the Robotic Neurobiology group, which develops self-reconfiguring robots, systems of self-organizing robots, and mobile sensor networks.
+# About Me
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed neque elit, tristique placerat feugiat ac, facilisis vitae arcu. Proin eget egestas augue. Praesent ut sem nec arcu pellentesque aliquet. Duis dapibus diam vel metus tempus vulputate. 
+Matthew Parker is a student of Statistics at the University of Victoria (UVic). His research interests include abundance modelling using INAR and N-Mixture methods, machine learning techniques, manifold regression, and applications to health care. He graduated from the Visual and Automated Disease Analytics training program in 2019.
