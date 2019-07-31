@@ -1,0 +1,79 @@
+---
+title: Introduction to ggplot2 (part 1)
+author: Matthew Parker
+date: '2018-02-15'
+categories:
+  - R
+  - Tidyverse
+  - ggplot
+tags:
+  - R
+  - tidyverse
+  - ggplot
+---
+
+Getting bored with the plots you can make using the base R _plot_? Probably time to spice things up with ggplot!
+
+You can read through this article, or you can watch the tutorial video below (or both!).
+
+<iframe width="560" height="315" src="//www.youtube.com/embed/xZOhepWLzxQ" frameborder="0"></iframe>
+
+Let's get started. If you haven't used ggplot before, you will need to install that package by running this either in the R console, or in an R script:
+
+```{r intro, eval=FALSE}
+install.packages("ggplot2")
+```
+
+To include the library, you just run this:
+
+```{r loadlib, message=FALSE, error=FALSE, warning=FALSE}
+library(ggplot2)
+```
+
+Now that ggplot2 is installed and loaded, we'll use the data set msleep contained in the ggplot2 package.
+
+```{r getdata}
+sleep <- ggplot2::msleep
+head(sleep)
+```
+
+You can see all of the column names (and hence all of the variables we have to play with).
+
+```{r colnam}
+colnames(sleep)
+```
+
+Let's make a really simple ggplot call to plot "brainwt" versus "sleep_total":
+
+```{r firstplot, fig.width=8, fig.height=4}
+ggplot(data=sleep) +
+  geom_point(aes(x=sleep_total, y=brainwt))
+```
+
+In the above call there are a few things worth explaining. First, the use of "data=" tells ggplot where to find the data (in this case the column names) which we will be using. Without this, ggplot would not know where "sleep_total" and "brainwt" are located. Second, "geom_point()" is one of many layers that can be added to a ggplot. Layers are added using a "+" between them, as seen in the above ggplot call. You can add as many layers as you'd like to the plot, which allows for very easily customized plots. Finally, "aes()" tells ggplot what aesthetics are mapped to which variables. In the case of "geom_point()", the two mandatory aesthetics are "x" and "y". These tell ggplot what the x and y coordinates of each point are. Aesthetics are set equal to column names present in your data in order to map the aesthetic to that variable.
+
+Aesthetics can be used for much more than this however, as they allow you to map colours, shapes, line types, etc. to your variables. As an example, let's set "color=order" in the aesthetics of the "geom_point()". While we are at it, let's also take the log transform of the y aesthetic. This will show off the linear relationship, and make the data easier to look at.
+
+```{r secondplot, fig.width=8, fig.height=4}
+ggplot(data=sleep) +
+  geom_point(aes(x=sleep_total, y=log(brainwt), color=order))
+```
+
+This is showing quite a bit of information, but suppose we want to separate the data into sub plots by group. This is easy to do using "facet_wrap" or "facet_grid". We will use "facet_wrap" as an example.
+
+```{r thirdplot, fig.width=8, fig.height=4}
+ggplot(data=sleep) +
+  geom_point(aes(x=sleep_total, y=log(brainwt), color=order)) +
+  facet_wrap(~vore)
+```
+
+At this point we've got a plot, showing some interesting data, using color as an aesthetic and a facet_wrap to separate groups. We're missing the most basic title, and the labels could use some tidying.
+
+```{r fourthplot, fig.width=8, fig.height=4}
+ggplot(data=sleep) +
+  geom_point(aes(x=sleep_total, y=log(brainwt), color=order)) +
+  facet_wrap(~vore) +
+  ylab("Logarithm of Brain Weight (kg)") +
+  xlab("Total Daily Sleep (hours)") +
+  ggtitle("Relationship between Brain Weight and Sleep by Diet")
+```
