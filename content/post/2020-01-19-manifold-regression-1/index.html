@@ -1,0 +1,95 @@
+---
+title: 'Manifold Regression (part 1)'
+author: Matthew Parker
+date: '2020-01-19'
+categories:
+  - R
+  - Regression
+tags:
+  - R
+  - regression
+  - tutorial
+  - package
+image:
+  placement: 1
+  focal_point: "Left"
+  preview_only: false
+---
+
+
+
+<p>Welcome to the world of manifold regression! In part 1 we will introduce the basic concepts, overview the theory behind regression on manifolds, develop an intuition for these models, and discuss their applications. See part 2 for a step by step statistical analysis applying these models.</p>
+<div id="what-is-regression" class="section level2">
+<h2>What is regression?</h2>
+<p>We will consider <a href="https://en.wikipedia.org/wiki/Linear_regression">regular linear regression</a> (RLR) as an analogy to help understand manifold regression. In RLR, we consider pairs of observations <span class="math inline">\((x,y)\)</span>, with <span class="math inline">\(x\)</span> the independent variable, and <span class="math inline">\(y\)</span> the dependent variable. Here, <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span> are both real numbers. We assume a linear relationship between <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>, so that <span class="math inline">\(y=\beta_0 + \beta_1 x\)</span>. <span class="math inline">\(\beta_0\)</span> is the intercept of the straight line formed by plotting <span class="math inline">\(y\)</span> versus <span class="math inline">\(x\)</span>, while <span class="math inline">\(\beta_1\)</span> is the slope.</p>
+<p>We account for noise/uncertainy/measurement error by adding a random variable <span class="math inline">\(\epsilon\)</span>, drawn independently from a centered normal distribution with variance <span class="math inline">\(\sigma^2\)</span>. Thus the model specification in linear regression is:</p>
+<p><span class="math display">\[
+\begin{array}{l}
+  y=\beta_0 + \beta_1 x + \epsilon \\
+  \epsilon \sim N(0,\sigma^2)
+\end{array}
+\]</span></p>
+<p>The goal in RLR is then to estimate the two unknown values <span class="math inline">\(\beta_0\)</span> and <span class="math inline">\(\beta_1\)</span>, from a set of observed pairs <span class="math inline">\((x_i,y_i)\)</span>, with <span class="math inline">\(i \in 1,2,...,N\)</span>.</p>
+</div>
+<div id="what-is-a-manifold" class="section level2">
+<h2>What is a manifold?</h2>
+<p>A <a href="https://en.wikipedia.org/wiki/Manifold">manifold</a> is a surface embedded in a larger euclidean space, such as how the skin of a ball forms a two dimensional curved surface embedded in a three dimensional space. Similar to how the earth appears locally flat when standing on an open plain, a manifold has the property that anywhere on the manifold, it is possible to “zoom in” arbitrarily close, until the manifold appears flat. For a mathematically rigorous treatment, including defining distance metrics on manifolds, <a href="https://www.springer.com/gp/book/9783319917542">Lee (1997)</a> is a good text.</p>
+</div>
+<div id="symmetric-positive-definite-matrices" class="section level2">
+<h2>Symmetric Positive Definite Matrices</h2>
+<p>A square matrix <span class="math inline">\(A\)</span> is symmetric if it is equal to its transpose: <span class="math inline">\(A = A^T\)</span>. This means that if <span class="math inline">\(a_{ij}\)</span> are the entries of <span class="math inline">\(A\)</span>, <span class="math inline">\(a_{ij} = a_{ji}\)</span>. Or that <span class="math inline">\(A\)</span> is fully specified by its upper triangular elements.</p>
+<p>A square matrix <span class="math inline">\(A\)</span> is <a href="https://en.wikipedia.org/wiki/Definiteness_of_a_matrix">positive definite</a> if for every non-zero vector <span class="math inline">\(b\)</span>, the product <span class="math inline">\(b^T A b\)</span> is greater than zero.</p>
+<p>If a matrix <span class="math inline">\(A\)</span> is symmetric and positive definite, then we say that is it a symmetric positive definite (SPD) matrix. This class of matrices is extremely useful and they show up in real world applications everywhere. A classic example from statistics are <a href="https://en.wikipedia.org/wiki/Covariance_matrix">covariance matrices</a>, where each entry shows the covariance between two variables (the diagonal entries being the variances of single variables). Covariance matrices are always positive semi-definite (meaning <span class="math inline">\(b^T A b \ge 0\)</span>), and will be positive definite if the covariance matrix is full rank (meaning that each row is linearly independent of the other rows).</p>
+<p>The set of all SPD matrices of size <span class="math inline">\(n \times n\)</span> form a manifold.</p>
+</div>
+<div id="univariate-manifold-regression" class="section level2">
+<h2>Univariate manifold regression</h2>
+<p>Fletcher (2011) developed regression methods for a manifold valued response variable <span class="math inline">\(Y\)</span> against a single real valued regressor <span class="math inline">\(x\)</span>. The regression model has the form:</p>
+<p><span class="math display">\[
+\begin{array}{l}
+  Y=Exp(P, Exp(V_1 x, E))
+\end{array}
+\]</span></p>
+<p>Where:</p>
+<ul>
+<li><span class="math inline">\(P\)</span> is a SPD matrix, called the base point on the manifold</li>
+<li><span class="math inline">\(V_1\)</span> is a symmetric matrix, called the coefficient matrix of <span class="math inline">\(x\)</span></li>
+<li><span class="math inline">\(E\)</span> is a symmetric matrix, called the error matrix</li>
+</ul>
+<p><span class="math inline">\(Exp(A,B)\)</span> is the <a href="https://en.wikipedia.org/wiki/Exponential_map_(Riemannian_geometry)">exponential map</a> operator, which projects the symmetric matrix <span class="math inline">\(B\)</span> (which belongs to the tangent space of SPD matrices) onto the space of SPD matrices at the base point <span class="math inline">\(A\)</span>. Therefore, if <span class="math inline">\(C=Exp(A,B)\)</span>, then <span class="math inline">\(C\)</span> is also an SPD matrix.</p>
+<p>Intuitively, the exponential map can be thought of as projecting from the euclidean space onto the embedded manifold. For example, using the Earth as our example manifold, applying the exponential map to a straight line through space (touching the Earth at one point, the base point), would result in a geodesic on the surface of the Earth, passing through the base point.</p>
+<p>There is an easy analogy between RLR and manifold regression. The base point <span class="math inline">\(P\)</span> is like the intercept <span class="math inline">\(\beta_0\)</span>, in that both represent the mean value of the response when the regressor is zero valued. The coefficient matrix <span class="math inline">\(V_1\)</span> is similar to the slope <span class="math inline">\(\beta_1\)</span>, in that both represent the change in response due to a change in the regressor <span class="math inline">\(x\)</span>.</p>
+<p>The two big differences between RLR and manifold regression are</p>
+<ol style="list-style-type: decimal">
+<li>the parameters and the response are matrix valued rather than real valued</li>
+<li>the exponential map, while analogous to addition, has the added benefit of forcing the response variable to exist on the manifold</li>
+</ol>
+</div>
+<div id="multivariate-manifold-regression" class="section level2">
+<h2>Multivariate manifold regression</h2>
+<p>Kim et al. (2014) extended the work of Fletcher (2011) for multivariate responses. The framework is the same, but switches from a single regressor/coefficient matrix pair <span class="math inline">\((x,V_1)\)</span>, to several such pairs <span class="math inline">\(\{(x_1,V_1), (x_2,V_2), ..., (x_k, V_k)\}\)</span>. The multivariate manifold regression model has the form</p>
+<p><span class="math display">\[
+\begin{array}{l}
+  Y=Exp(P, Exp(\sum_{i=1}^{k} V_i x_i, E))
+\end{array}
+\]</span></p>
+<p>Kim et al. (2014) provide algorithms for fitting these multivariate manifold regression models <a href="https://www.nitrc.org/projects/riem_mglm">implemented as matlab code</a>. These codes make use of gradient descent to minimize the objective function in searching for the best estimates of the coefficient matrices and the base point. If you use matlab, then you can readily make use of the matlab code provided by Kim et al. (2014) to fit these types of models. However, if you use R, then I have ported the code to an R package <a href="https://github.com/mrparker909/MGLMRiem">MGLMRiem</a>.</p>
+</div>
+<div id="applications" class="section level2">
+<h2>Applications</h2>
+<p>Applications of manifold regression are abundant. Anywhere that your response data takes the form of a covariance matrix, or a correlation matrix, is a good candidate for SPD manifold regression. Many recent applications in health sciences come from medical imaging, including:</p>
+<ul>
+<li>Diffusion Tensor Imaging, see for example Zhu et al. (2009)</li>
+<li>MEG/EEG, see for example Sabbagh et al. (2019)</li>
+</ul>
+<p>Other potential applications include fMRI timeseries correlations, brain subnetwork inter and intra covariances, and machine learning algorithms.</p>
+<p>For an example showing how to apply these models to your own data, see <a href="">part 2</a> (<em>COMING SOON</em>).</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Fletcher, T. (2011). Geodesic Regression on Riemannian Manifolds. In Pennec, Xavier, Joshi, Sarang, Nielsen, &amp; Mads (Eds.), Proceedings of the Third International Workshop on Mathematical Foundations of Computational Anatomy—Geometrical and Statistical Methods for Modelling Biological Shape Variability (pp. 75–86). <a href="https://hal.inria.fr/inria-00623920" class="uri">https://hal.inria.fr/inria-00623920</a></p>
+<p>Kim, H. J., Adluru, N., Collins, M. D., Chung, M. K., Bendin, B. B., Johnson, S. C., Davidson, R. J., &amp; Singh, V. (2014). Multivariate General Linear Models (MGLM) on Riemannian Manifolds with Applications to Statistical Analysis of Diffusion Weighted Images. 2014 IEEE Conference on Computer Vision and Pattern Recognition, 2705–2712. <a href="https://doi.org/10.1109/CVPR.2014.352" class="uri">https://doi.org/10.1109/CVPR.2014.352</a></p>
+<p>Lee, J. M. (1997). Riemannian manifolds: An introduction to curvature. Springer.</p>
+<p>Sabbagh, D., Ablin, P., Varoquaux, G., Gramfort, A., &amp; Engeman, D. A. (2019). Manifold-regression to predict from MEG/EEG brain signals without source modeling. arXiv preprint arXiv:1906.02687.</p>
+<p>Zhu, H., Chen, Y., Ibrahim, J. G., Li, Y., Hall, C., &amp; Lin, W. (2009). Intrinsic Regression Models for Positive-Definite Matrices With Applications to Diffusion Tensor Imaging. Journal of the American Statistical Association, 104(487), 1203–1212. JSTOR.</p>
+</div>
