@@ -6,4 +6,4 @@ blogdown
 Thumbs.db
 public/
 matthew-parker.Rproj
-.gz
+*.gz
