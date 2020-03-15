@@ -1,0 +1,106 @@
+---
+title: Introduction to ggplot2 (part 2)
+author: Matthew Parker
+date: '2018-07-16'
+categories:
+  - R
+  - Tidyverse
+  - ggplot
+tags:
+  - R
+  - tidyverse
+  - ggplot
+  - regression
+  - outliers
+  - standard error
+---
+
+
+
+<p>Getting bored with the plots you can make using the base R <em>plot</em>? Probably time to spice things up with ggplot!</p>
+<p>You can read through this article, or you can watch the tutorial video below (or both!).</p>
+<iframe width="560" height="315" src="//www.youtube.com/embed/sZRTkEtAdRA" frameborder="0">
+</iframe>
+<p>Let’s get started. First load the <em>ggplot2</em> library, since thats what we’re here to learn!</p>
+<pre class="r"><code>library(ggplot2)</code></pre>
+<p>We’re going to be looking at the <em>msleep</em> dataset (same one we were looking at <a href="/post/introduction-to-ggplot2/">in the last tutorial</a> )</p>
+<pre class="r"><code>sleep &lt;- ggplot2::msleep</code></pre>
+<p>We’re interested in exploring the linear relationship between <em>log(brain weights)</em> and <em>total sleep</em>. In light of this, let’s make a new <em>data.frame</em> for those pieces of data.</p>
+<pre class="r"><code>data &lt;- data.frame(log_bw=log(sleep$brainwt), st=sleep$sleep_total)
+summary(data)</code></pre>
+<pre><code>##      log_bw             st       
+##  Min.   :-8.874   Min.   : 1.90  
+##  1st Qu.:-5.845   1st Qu.: 7.85  
+##  Median :-4.390   Median :10.10  
+##  Mean   :-4.063   Mean   :10.43  
+##  3rd Qu.:-2.085   3rd Qu.:13.75  
+##  Max.   : 1.743   Max.   :19.90  
+##  NA&#39;s   :27</code></pre>
+<p>As you can see from the summary, there are missing (NA) values in <em>log_bw</em>. Let’s get rid of those using the <em>which()</em> function.</p>
+<pre class="r"><code>data_clean &lt;- data[which(!is.na(data$log_bw)),]
+summary(data_clean)</code></pre>
+<pre><code>##      log_bw             st        
+##  Min.   :-8.874   Min.   : 2.900  
+##  1st Qu.:-5.845   1st Qu.: 7.575  
+##  Median :-4.390   Median : 9.950  
+##  Mean   :-4.063   Mean   :10.171  
+##  3rd Qu.:-2.085   3rd Qu.:12.575  
+##  Max.   : 1.743   Max.   :19.900</code></pre>
+<p>Now the summary shows that we have no missing values, let’s move on. Let’s print a quick scatter plot of the data (just like we did in the previous tutorial). The only new thing here is the call to <em>theme_bw()</em>. This is an example of using themes to change the general feel of the plot. Play around with other themes or even create your own!</p>
+<pre class="r"><code>g1 &lt;- ggplot(data=data_clean) +
+  geom_point(aes(x = st, y = log_bw)) +
+  theme_bw()
+g1</code></pre>
+<p><img src="/post/2018-07-16-intro-to-ggplot2/index_files/figure-html/scatterplot1-1.png" width="768" /></p>
+<p>You can see that there is some linear trend in the plot, and a linear regression may be appropriate to fit a “best fit” line. We will use the function <em>lm()</em>, which performs an ordinary least squares regression. In this case we have <em>log_bw</em> as our dependent (response) variable, and <em>st</em> as our independent variable. Note that the “+ 0” indicates that we do not want an intercept term in our regression (so the intercept is forced to be the point <em>(0,0)</em>). This choice was made arbitrarily, and in a real analysis you would need to worry about justifying that choice.</p>
+<pre class="r"><code>mod1 &lt;- lm(formula = log_bw ~ st + 0, data = data_clean)
+s &lt;- summary(mod1)</code></pre>
+<p>Let’s take the output from the linear regression, and put it into a <em>data.frame</em> so that we can use it easily with <em>ggplot</em>.</p>
+<pre class="r"><code>data_mod1 &lt;- data.frame(x = mod1$model$st, y_fit = mod1$fitted.values)</code></pre>
+<p>Now we can easy add the regression line to our scatter plot!</p>
+<pre class="r"><code>g2 &lt;- g1 + geom_line(data   = data_mod1, aes(x = x, y = y_fit),
+                     colour = &quot;blue&quot;,
+                     size   = 1)
+g2</code></pre>
+<p><img src="/post/2018-07-16-intro-to-ggplot2/index_files/figure-html/scatterplot2-1.png" width="768" /></p>
+<p>Adding standard error lines is very similar, and we’ll make use of the standard error already calculated and stored in the model summary. We’ll set the <em>geom_point</em> to have an alpha of 0.5, this will allow the points to fade into the backdrop, and bring out the regression line, which we want to be the visual focus of the plot. We will also use <em>linetype = 2</em> in order to allow the standard error lines to have a dashed style.</p>
+<pre class="r"><code>sigma &lt;- s$sigma
+
+g3 &lt;- ggplot() +
+  geom_point(data    = data_clean, aes(x = st, y = log_bw),
+             alpha   = 0.5) +
+  geom_line(data     = data_mod1, aes(x = x, y = y_fit),
+            size     = 1,
+            colour   = &quot;blue&quot;) +
+  geom_line(data     = data_mod1, aes(x = x, y = y_fit-sigma),
+            colour   = &quot;blue&quot;,
+            linetype = 2) +
+  geom_line(data     = data_mod1, aes(x = x, y = y_fit+sigma),
+            colour   = &quot;blue&quot;,
+            linetype = 2) +
+  theme_bw()
+g3</code></pre>
+<p><img src="/post/2018-07-16-intro-to-ggplot2/index_files/figure-html/scatterplot3-1.png" width="768" /></p>
+<p>Next up we’ll look at the outliers! There is some flexibility in defining outliers, so for our purposes we will define an outlier to be any point greater than 2 standard errors from the fitted line.</p>
+<pre class="r"><code>data_outs &lt;- mod1$model[which(abs(mod1$model$log_bw-mod1$fitted.values) &gt; 2*sigma),]
+data_outs</code></pre>
+<pre><code>##       log_bw   st
+## 17 -8.873868  9.1
+## 62 -2.513306 18.1</code></pre>
+<p>You can see that we have two outliers, let’s highlight them on our plot in bright red.</p>
+<pre class="r"><code>g4 &lt;- g3 + geom_point(data   = data_outs, aes(x = st, y = log_bw),
+                      colour = &quot;red&quot;,
+                      size   = 2.25)
+g4</code></pre>
+<p><img src="/post/2018-07-16-intro-to-ggplot2/index_files/figure-html/scatterplot4-1.png" width="768" /></p>
+<p>Let’s shade in the region between the standard error lines, purely for the joy of shading areas of a plot. We’ll do this using <em>geom_ribbon</em>, and while we’re at it we’ll add prettier labels and a plot title.</p>
+<pre class="r"><code>g4 + geom_ribbon(data  = data_mod1, aes(x   = x,
+                                       ymin = y_fit-sigma,
+                                       ymax = y_fit+sigma),
+                 alpha = 0.25,
+                 fill  = &quot;lightblue&quot;) +
+  ggtitle(&quot;Linear Regression: log(Brain Weight) ~ Total Sleep&quot;) +
+  xlab(&quot;Total Sleep (hours)&quot;) +
+  ylab(&quot;log(Brain Weight) (kg)&quot;)</code></pre>
+<p><img src="/post/2018-07-16-intro-to-ggplot2/index_files/figure-html/scatterplot5-1.png" width="768" /></p>
+<p>That concludes this tutorial lesson on <em>ggplot2</em>. Now go make some beautiful graphs! Feel free to tweet them <em><span class="citation">@mrparker9090</span></em>.</p>

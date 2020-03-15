@@ -1,0 +1,146 @@
+---
+title: Introduction to ggplot2 (part 2)
+author: Matthew Parker
+date: '2018-07-16'
+categories:
+  - R
+  - Tidyverse
+  - ggplot
+tags:
+  - R
+  - tidyverse
+  - ggplot
+  - regression
+  - outliers
+  - standard error
+---
+
+Getting bored with the plots you can make using the base R _plot_? Probably time to spice things up with ggplot!
+
+You can read through this article, or you can watch the tutorial video below (or both!).
+
+<iframe width="560" height="315" src="//www.youtube.com/embed/sZRTkEtAdRA" frameborder="0"></iframe>
+
+Let's get started. First load the _ggplot2_ library, since thats what we're here to learn!
+
+```{r loadlib, message=FALSE, error=FALSE, warning=FALSE}
+library(ggplot2)
+```
+
+
+We're going to be looking at the _msleep_ dataset (same one we were looking at 
+<a href="/post/introduction-to-ggplot2/">in the last tutorial</a>
+)
+
+```{r lookatdata, message=FALSE, error=FALSE, warning=FALSE}
+sleep <- ggplot2::msleep
+```
+
+We're interested in exploring the linear relationship between _log(brain weights)_ and _total sleep_. In light of this, let's make a new _data.frame_ for those pieces of data.
+
+```{r setupdata1}
+data <- data.frame(log_bw=log(sleep$brainwt), st=sleep$sleep_total)
+summary(data)
+```
+
+
+As you can see from the summary, there are missing (NA) values in _log\_bw_. Let's get rid of those using the _which()_ function.
+
+
+```{r setupdata2}
+data_clean <- data[which(!is.na(data$log_bw)),]
+summary(data_clean)
+```
+
+Now the summary shows that we have no missing values, let's move on. Let's print a quick scatter plot of the data (just like we did in the previous tutorial). The only new thing here is the call to _theme\_bw()_. This is an example of using themes to change the general feel of the plot. Play around with other themes or even create your own!
+
+```{r scatterplot1, fig.width=8, fig.height=4}
+g1 <- ggplot(data=data_clean) +
+  geom_point(aes(x = st, y = log_bw)) +
+  theme_bw()
+g1
+```
+
+You can see that there is some linear trend in the plot, and a linear regression may be appropriate to fit a "best fit" line. We will use the function _lm()_, which performs an ordinary least squares regression. In this case we have _log\_bw_ as our dependent (response) variable, and _st_ as our independent variable. Note that the "+ 0" indicates that we do not want an intercept term in our regression (so the intercept is forced to be the point _(0,0)_). This choice was made arbitrarily, and in a real analysis you would need to worry about justifying that choice.
+
+```{r linearmodel1}
+mod1 <- lm(formula = log_bw ~ st + 0, data = data_clean)
+s <- summary(mod1)
+```
+
+Let's take the output from the linear regression, and put it into a _data.frame_ so that we can use it easily with _ggplot_.
+
+```{r setupdata3}
+data_mod1 <- data.frame(x = mod1$model$st, y_fit = mod1$fitted.values)
+```
+
+Now we can easy add the regression line to our scatter plot!
+
+
+```{r scatterplot2, fig.width=8, fig.height=4}
+g2 <- g1 + geom_line(data   = data_mod1, aes(x = x, y = y_fit),
+                     colour = "blue",
+                     size   = 1)
+g2
+```
+
+Adding standard error lines is very similar, and we'll make use of the standard error already calculated and stored in the model summary. We'll set the _geom\_point_ to have an alpha of 0.5, this will allow the points to fade into the backdrop, and bring out the regression line, which we want to be the visual focus of the plot. We will also use _linetype = 2_ in order to allow the standard error lines to have a dashed style.
+
+
+```{r scatterplot3, fig.width=8, fig.height=4}
+sigma <- s$sigma
+
+g3 <- ggplot() +
+  geom_point(data    = data_clean, aes(x = st, y = log_bw),
+             alpha   = 0.5) +
+  geom_line(data     = data_mod1, aes(x = x, y = y_fit),
+            size     = 1,
+            colour   = "blue") +
+  geom_line(data     = data_mod1, aes(x = x, y = y_fit-sigma),
+            colour   = "blue",
+            linetype = 2) +
+  geom_line(data     = data_mod1, aes(x = x, y = y_fit+sigma),
+            colour   = "blue",
+            linetype = 2) +
+  theme_bw()
+g3
+```
+
+Next up we'll look at the outliers! There is some flexibility in defining outliers, so for our purposes we will define an outlier to be any point greater than 2 standard errors from the fitted line.
+
+```{r outliers1}
+data_outs <- mod1$model[which(abs(mod1$model$log_bw-mod1$fitted.values) > 2*sigma),]
+data_outs
+```
+
+You can see that we have two outliers, let's highlight them on our plot in bright red.
+
+```{r scatterplot4, fig.width=8, fig.height=4}
+g4 <- g3 + geom_point(data   = data_outs, aes(x = st, y = log_bw),
+                      colour = "red",
+                      size   = 2.25)
+g4
+```
+
+Let's shade in the region between the standard error lines, purely for the joy of shading areas of a plot. We'll do this using _geom\_ribbon_, and while we're at it we'll add prettier labels and a plot title.
+
+```{r scatterplot5, fig.width=8, fig.height=4}
+g4 + geom_ribbon(data  = data_mod1, aes(x   = x,
+                                       ymin = y_fit-sigma,
+                                       ymax = y_fit+sigma),
+                 alpha = 0.25,
+                 fill  = "lightblue") +
+  ggtitle("Linear Regression: log(Brain Weight) ~ Total Sleep") +
+  xlab("Total Sleep (hours)") +
+  ylab("log(Brain Weight) (kg)")
+```
+
+That concludes this tutorial lesson on _ggplot2_. Now go make some beautiful graphs! Feel free to tweet them *@mrparker9090*.
+
+
+
+
+
+
+
+

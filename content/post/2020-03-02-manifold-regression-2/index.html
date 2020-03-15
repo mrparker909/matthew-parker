@@ -1,0 +1,245 @@
+---
+title: 'Manifold Regression (part 2)'
+author: Matthew Parker
+date: '2020-03-02'
+categories:
+  - R
+  - Regression
+tags:
+  - R
+  - regression
+  - tutorial
+  - package
+  - SPD
+  - manifold
+image:
+  placement: 1
+  focal_point: "Left"
+  preview_only: false
+---
+
+
+
+<p>Welcome to the world of manifold regression! In part 2 we will apply manifold regression to a case study involving fMRI brain imaging data. See <a href="../2020-01-19-manifold-regression-1">part 1</a> for an introduction to these models.</p>
+<p>If you want to skip past the data preparation steps, and go right into the manifold regression, <a href="#manifold-regression">click here</a></p>
+<div id="getting-data" class="section level2">
+<h2>Getting Data</h2>
+<p><a href="https://openneuro.org/datasets/ds002322/versions/1.0.3"><img alt="OpenNeuroLogo" src="img/open_neruo_logo.png"
+         width=150" height="70"></a></p>
+<p>First, we need a set of data to work from. There are many great fMRI imaging datasets available on the OpenNeuro website. We will use the data of Bhattasali et al. (2020), available here: <a href="https://openneuro.org/datasets/ds002322/versions/1.0.3">OpenNeuro</a>.</p>
+<p>This data set contains fMRI imaging data for 23 individuals, of which 11 are male and 12 are female. The subjects are aged 18 to 24. Each subject has 372 scans, with <span class="math inline">\(79\times 95\times 68\)</span> <a href="https://en.wikipedia.org/wiki/Functional_magnetic_resonance_imaging#Spatial_resolution">voxels</a> per scan.</p>
+<p>We will be using the preprocessed fMRI scans, which have been spatially realigned, smoothed using an isotropic gaussian filter, and transported to <a href="https://www.mcgill.ca/bic/software/tools-data-analysis/anatomical-mri/atlases/mni-305">MNI</a> space. MNI stands for “Montreal Neurosciences Institute”, and refers in this context to a method of space transformation useful for making comparisons between the brains of different subjects (whose brains will otherwise have different physical morphologies).</p>
+<p>Scans which have not been preprocessed are generally not suitable for this type of analysis, and in general are much more difficult to incorporate into statistical analyses.</p>
+</div>
+<div id="libraries" class="section level2">
+<h2>Libraries</h2>
+<p>These are the R libraries we will be using:</p>
+<pre class="r"><code>library(neurobase)  # for handling .nii files
+library(oro.nifti)  # for visualizing .nii data
+library(ggplot2)    # for plotting
+library(tidyverse)  # for tidy data management
+library(abind)      # for appending arrays together</code></pre>
+</div>
+<div id="visualize-the-data" class="section level2">
+<h2>Visualize the Data</h2>
+<p>The brain imaging data is stored in the <a href="https://nifti.nimh.nih.gov/nifti-1/">.nii format</a>. A very useful R package for reading and visualizing these file formats is <a href="https://CRAN.R-project.org/package=neurobase">neurobase</a>.</p>
+<p>Here we are using neurobase for loading the fMRI data for the first subject:</p>
+<pre class="r"><code>subject1 &lt;- neurobase::readnii(
+  &quot;data/fmri/derivatives_sub-18_sub-18_task-alice_bold_preprocessed.nii.gz&quot;)
+
+subject1@.Data = subject1@.Data[,,35:37,]
+dim(subject1@.Data)</code></pre>
+<pre><code>## [1]  79  95   3 372</code></pre>
+<p>Notice that we have immediately discarded all but three of the z-layers of the scan. This is to save on memory usage due to the .nii files being very large. If you have a large amount of RAM to work with, then you may not want to do this. After dropping z-layers, we are left with 372 observations of <span class="math inline">\(79 \times 95 \times 3\)</span> <a href="https://en.wikipedia.org/wiki/Functional_magnetic_resonance_imaging#Spatial_resolution">voxels</a>.</p>
+<p>Let’s see what this data looks like, note that <span class="math inline">\(w=90\)</span> selects the 90th time slice/observation:</p>
+<pre class="r"><code>neurobase::ortho2(subject1, w=90)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>Above is a view of three slices of the 3D matrix of voxels for subject 1. Each voxel (or 3D pixel) represents the fMRI signal strength for that region of the brain. The first two images are only 3 voxels tall, and this is because we only kept the z-layers for <span class="math inline">\(z=\)</span> 35, 36 and 37 (which will now be z-layers 1, 2, and 3 respectively). We can also look at all 372 time points in one image:</p>
+<pre class="r"><code>temp = subject1
+temp@.Data = subject1@.Data[,,2,]
+oro.nifti::image(temp)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>It seems that the first observation is a little bit different than the others:</p>
+<pre class="r"><code>temp1 = subject1
+temp2 = subject1
+temp1@.Data = subject1@.Data[,,2,1]
+temp2@.Data = subject1@.Data[,,2,2]
+oro.nifti::image(temp1)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<pre class="r"><code>oro.nifti::image(temp2)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-5-2.png" width="672" /></p>
+<p>For this reason we will exclude the first time point.</p>
+<pre class="r"><code>subject1@.Data = subject1@.Data[,,,-1]</code></pre>
+<p>Let’s compare to subject 2, and check for any obvious issues:</p>
+<pre class="r"><code>subject2 &lt;- neurobase::readnii(
+  &quot;data/fmri/derivatives_sub-22_sub-22_task-alice_bold_preprocessed.nii.gz&quot;)
+
+subject2@.Data = subject2@.Data[,,35:37,-1]
+temp = subject2
+temp@.Data = subject2@.Data[,,2,]
+oro.nifti::image(temp)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>I don’t see any major issues, so we’ll continue on.</p>
+<p>Suppose we are interested in a particular brain region. This could come from an <a href="https://en.wikipedia.org/wiki/Image_segmentation">image segmentation</a>, <a href="https://en.wikipedia.org/wiki/Connectome#Primary_challenge_for_macroscale_connectomics:_determining_parcellations_of_the_brain">brain parcellation</a>, or a <a href="https://en.wikipedia.org/wiki/Brain_atlas">brain atlas</a>. In this case we will define our own region of interest (ROI).</p>
+<pre class="r"><code>ROI = c(32, 49, 1, 2, 2, 2) # x, y, z, l, w, h</code></pre>
+<p>The ROI defined above gives us a rectangle in 3D voxel space, where the first three numbers define the starting corner of the rectangle, and the last three numbers define the length, width, and height of the rectangle. In this example, the ROI is a <span class="math inline">\(2 \times 2 \times 2\)</span> <span class="math inline">\((l \times w \times h)\)</span> square region with first vertex at <span class="math inline">\((32,49,1)\)</span>.</p>
+<pre class="r"><code>mask = array(F, dim=dim(subject1@.Data))
+mask[(ROI[1]:(ROI[1]+ROI[4]-1)),
+     (ROI[2]:(ROI[2]+ROI[5]-1)),
+     (ROI[3]:(ROI[3]+ROI[6]-1)),
+    ] &lt;- T
+
+s1_mask = subject1
+s1_mask@.Data[!mask] &lt;- 0
+
+s1_roi = subject1
+s1_roi@.Data = array(subject1@.Data[mask], dim=c(2,2,2,371))
+
+neurobase::ortho2(subject1, s1_mask, w=90, mfrow = c(1,3))</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<pre class="r"><code>neurobase::ortho2(s1_roi, w=90, mfrow = c(1,3))</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-9-2.png" width="672" /></p>
+<p>In the first of the above two figures, you see a small red square indicating the location of the ROI. In the second figure, we have zoomed in on all three plots to show only the <span class="math inline">\(2 \times 2 \times 2\)</span> ROI.</p>
+<p>Let <span class="math inline">\(V_1,V_2,...,V_n\)</span> represent the voxels in the ROI (for this example, <span class="math inline">\(n=8\)</span>). For a given subject, and a given voxel (for example <span class="math inline">\(V_1\)</span>), the time series of fMRI measurements looks like this:</p>
+<pre class="r"><code>timeseries_x = subject1@.Data[32,49,1,]
+timeseries_t = 1:dim(subject1@.Data)[4]
+
+plot(x=timeseries_t, y=timeseries_x, type=&#39;l&#39;, main=&quot;fMRI time series: V1&quot;)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>You can see that the time series is non-stationary (the trend in this time series is downwards as time increases). This could be problematic, and one way to address this would be to transform the time series into one which is stationary (using differencing, or subtraction of the mean line). We will leave the time series untouched however, in order to keep things simple.</p>
+<p>We would like to be working with symmetric positive definite (SPD) matrices, and so we will use time series covariance matrices. To find the time series covariance matrix for an individual, we calculate:</p>
+<span class="math display">\[\begin{bmatrix}
+cov(V_1, V_1) &amp; cov(V_2, V_1)  &amp; \cdots &amp; cov(V_n, V_1) \\
+
+cov(V_1, V_2) &amp; cov(V_2, V_2) &amp; \cdots &amp; cov(V_n, V_2) \\
+
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+
+cov(V_1, V_n) &amp; cov(V_2, V_n) &amp; \cdots &amp; cov(V_n, V_n)
+\end{bmatrix}\]</span>
+<p>We can use the symmetric property of the covariance matrix to reduce the number of calculations we need to make. Note that for a correlation matrix, we could also set the diagonal to 1, saving even more computations. This can be relevant in saving computing time for large matrices and large numbers of subjects.</p>
+<p>Let’s compute the covariance matrix for each of the 23 subjects:</p>
+<pre class="r"><code>d = ROI[4]*ROI[5]*ROI[6]
+
+Y = NULL
+subject_files = list.files(path=&quot;data/fmri&quot;)
+for(subject in subject_files) {
+  
+  if(!file.exists(paste0(&quot;data/fmri/&quot;, subject))) { 
+    stop(paste(&quot;FILE NOT FOUND:&quot;, subject)) 
+  }
+  
+  s_roi = neurobase::readnii(paste0(&quot;data/fmri/&quot;, subject))
+  s_roi@.Data = s_roi@.Data[,,35:37,-1]
+  s_roi@.Data = array(s_roi@.Data[mask], dim=c(2,2,2,371))
+  
+  V = array(0, dim=c(d,371))
+  i = 0
+  for(x in 1:ROI[4]) {
+    for(y in 1:ROI[5]) {
+      for(z in 1:ROI[6]) {
+        i = i+1
+        V[i,] = s_roi@.Data[x,y,z,]
+      }
+    }
+  }
+  
+  Y1 = array(0, dim=c(d,d,1))
+  for(i in 1:d) {
+    for(j in 1:d) {
+      if(j &lt; i)   { Y1[i,j,1] = Y1[j,i,1] }
+      if(j &gt;= i)  { Y1[i,j,1] = cov(V[i,], V[j,]) }
+    }
+  }
+  
+  Y = abind::abind(Y,Y1)
+}
+
+
+dim(Y)</code></pre>
+<pre><code>## [1]  8  8 23</code></pre>
+<p>Notice that <span class="math inline">\(Y\)</span> is a stack of 23 <span class="math inline">\(8 \times 8\)</span> matrices. That is 1 covariance matrix each for 23 subjects.</p>
+</div>
+<div id="manifold-regression" class="section level2">
+<h2>Manifold Regression</h2>
+<p>We have 23 observations of <span class="math inline">\(8 \times 8\)</span> SPD matrices. Each of these matrices belongs to either a male or a female subject. We will hypothesise that there is a significant difference from the baseline (<span class="math inline">\(P\)</span>) between the ROI covariance matrices for male and female subjects, when controlling for age. We will test this hypothesis using manifold regression (Kim et al. 2014), and permutation testing (such as described in Fletcher 2011).</p>
+<p>The model we are considering is <span class="math inline">\(Y = P + x_1V_1 + x_2V_2\)</span>, where <span class="math inline">\(Y\)</span> is an SPD matrix, <span class="math inline">\(P\)</span> is a base point on the manifold (also an SPD matrix), <span class="math inline">\(V_i\)</span> are symmetric matrices, <span class="math inline">\(x_i\)</span> are the covariates. <span class="math inline">\(x_1\)</span> is an indicator variable which is 0 when subject <span class="math inline">\(i\)</span> is male, and 1 when female. <span class="math inline">\(x_2\)</span> is the age in years, standardized by subtracting the mean age and dividing by the standard deviation of age. The “+”&quot; sign indicates the exponential map projecting <span class="math inline">\(x_iV_i\)</span> onto the SPD manifold at the preceeding base point.</p>
+<pre class="r"><code># setup the Male/Female indicator variable and age variable
+sex = matrix(rep(c(0,0,1,1,0,0,1,1,0,0,0,0,
+                   0,0,1,1,0,1,1,1,1,1,1), each=1), nrow=1)
+age = matrix(rep(c(22,22,19,21,21,18,19,20,19,21,20,19,
+                   19,21,21,22,19,19,20,21,20,18,26), each=1), nrow=1)
+
+X = rbind(SEX=sex, AGE=(age-mean(age))/sd(age))</code></pre>
+<p>We will use the R package :</p>
+<pre class="r"><code>remotes::install_github(&quot;mrparker909/MGLMRiem&quot;)
+library(MGLMRiem)</code></pre>
+<p>Fitting the model is very easy:</p>
+<pre class="r"><code>mod = MGLMRiem::mglm_spd(X = X, Y = Y, maxiter = 200)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;Rfast&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     nth</code></pre>
+<pre><code>## The following objects are masked from &#39;package:purrr&#39;:
+## 
+##     is_integer, transpose</code></pre>
+<p>We can calculate the sums of squares for this model:</p>
+<pre class="r"><code>Ybar = karcher_mean_spd(Y, niter=200)
+SSE=MGLMRiem::SSE_spd(Y, mod$Yhat)
+SSE</code></pre>
+<pre><code>## [1] 168.8911</code></pre>
+<pre class="r"><code>SST=MGLMRiem::SST_spd(Y, Ybar)
+SST</code></pre>
+<pre><code>## [1] 188.4622</code></pre>
+<pre class="r"><code>SSR=MGLMRiem::SSR_spd(mod$Yhat, Ybar)
+SSR</code></pre>
+<pre><code>## [1] 18.84356</code></pre>
+<pre class="r"><code>print(paste0(&quot;R squared = &quot;, round(SSR/SST,8)))</code></pre>
+<pre><code>## [1] &quot;R squared = 0.09998587&quot;</code></pre>
+<p>The sums of squared error (SSE) account for about 90% of the total variability (SST). The sums of squares for the regression (SSR) account for around 10% of the variability.</p>
+<p>Which is to say, when we account for age and sex, we can explain about 10% of the variation in the observed covariance matrices.</p>
+<p>Let’s see how this changes if we only consider age:</p>
+<pre class="r"><code>mod2 = MGLMRiem::mglm_spd(X = X[2,], Y = Y, maxiter = 200)
+
+SSE2=MGLMRiem::SSE_spd(Y, mod2$Yhat)
+SSE2</code></pre>
+<pre><code>## [1] 177.8608</code></pre>
+<pre class="r"><code>SST2=MGLMRiem::SST_spd(Y, Ybar)
+SST2</code></pre>
+<pre><code>## [1] 188.4622</code></pre>
+<pre class="r"><code>SSR2=MGLMRiem::SSR_spd(mod2$Yhat, Ybar)
+SSR2</code></pre>
+<pre><code>## [1] 10.14889</code></pre>
+<pre class="r"><code>print(paste0(&quot;R squared = &quot;, round(SSR2/SST2,8)))</code></pre>
+<pre><code>## [1] &quot;R squared = 0.05385106&quot;</code></pre>
+<p>So both age and sex each account for around 5% of the variability.</p>
+<p>However, we should still test whether this small amount of explained variability is significant. We can investigate p-values using a permutation test. Doing this is relatively straight-forward, although exceptionally time consuming. We will permute our x-values so that they line up with random y values. We will fit the model to these permuted values, and calculate <span class="math inline">\(R^2\)</span> values for each of these permutations. We repeat this many times in order to build up a sampling distribution for <span class="math inline">\(R^2\)</span> under the null hypothesis (the covariates are independent of the observations).</p>
+<p>By comparing the distribution of permuted <span class="math inline">\(R^2\)</span> values to the <span class="math inline">\(R^2\)</span> value we computed above (<span class="math inline">\(R^2=\)</span> 0.0999859), we can calculate the probability of observing a more extreme value of <span class="math inline">\(R^2\)</span> under the null hypothesis. It is important to note that the resolution of this test is dependent on the number of permutations calculated. If you want to test p-values around 0.01, then you need more than 100 permutations. For p-values around 0.001, you need more than 1000, etc.</p>
+<pre class="r"><code>r2 = NULL
+for(i in 1:500) {
+  x_perm   = X[,sample(1:length(sex))]
+  mod_perm = MGLMRiem::mglm_spd(X = x_perm, Y = Y, maxiter = 100)
+  
+  SSR_perm = MGLMRiem::SSR_spd(mod_perm$Yhat, Ybar)
+  r2 = c(r2, SSR_perm/SST)
+}</code></pre>
+<pre class="r"><code>ggplot() + 
+  geom_density(data=data.frame(r2=r2), aes(x = r2), fill = &quot;blue&quot;, alpha=0.1) +
+  geom_vline(data=NULL, aes(xintercept=SSR/SST), colour=&quot;red&quot;) +
+  geom_label(data=NULL, aes(x=0.13, y=10, label=paste0(&quot;Permutation p-value = &quot;, 1-mean(r2 &lt; SSR/SST)))) +
+  theme_classic() +
+  xlab(&quot;R2&quot;) +
+  ylab(&quot;Density (500 Permutations)&quot;) +
+  ggtitle(&quot;Permutation Testing&quot;)</code></pre>
+<p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-21-1.png" width="672" /></p>
+<p>The red line indicates our observed <span class="math inline">\(R^2\)</span> value. So you can see that even though 10% of the variability could be explained by the model, our results are not statistically significant. Is this surprising?</p>
+<p>Not really, the effect size is small, and so we would need a reasonably large sample size to have any certainty in the results. In our case, we are fitting 2 covariates (plus one base point) using only 23 observations. Thus, unless the effect size was quite large, we would not expect to find any statistically significant covariate effects.</p>
+<p>To investigate further, we would need a larger sample size. It would also be beneficial to include more covariates which might have an impact on brain connectivity (such as education level, socio-economic status, race, and genetic factors).</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<p>Bhattasali, S., Brennan, J. R, Luh, W. M., Franzluebbers, B., &amp; Hale, J. T. (2020). The Alice Datasets: fMRI &amp; EEG Observations of Natural Language Comprehension. In Proceedings of the Twelfth International Conference on Language Resources and Evaluation (LREC 2020)</p>
+<p>Fletcher, T. (2011). Geodesic Regression on Riemannian Manifolds. In Pennec, Xavier, Joshi, Sarang, Nielsen, &amp; Mads (Eds.), Proceedings of the Third International Workshop on Mathematical Foundations of Computational Anatomy—Geometrical and Statistical Methods for Modelling Biological Shape Variability (pp. 75–86). <a href="https://hal.inria.fr/inria-00623920" class="uri">https://hal.inria.fr/inria-00623920</a></p>
+<p>Kim, H. J., Adluru, N., Collins, M. D., Chung, M. K., Bendin, B. B., Johnson, S. C., Davidson, R. J., &amp; Singh, V. (2014). Multivariate General Linear Models (MGLM) on Riemannian Manifolds with Applications to Statistical Analysis of Diffusion Weighted Images. 2014 IEEE Conference on Computer Vision and Pattern Recognition, 2705–2712. <a href="https://doi.org/10.1109/CVPR.2014.352" class="uri">https://doi.org/10.1109/CVPR.2014.352</a></p>
+</div>
