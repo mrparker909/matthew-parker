@@ -1,10 +1,11 @@
 ---
 title: 'Manifold Regression (part 2)'
 author: Matthew Parker
-date: '2020-03-02'
+date: '2020-03-15'
 categories:
   - R
   - Regression
+  - fMRI
 tags:
   - R
   - regression
@@ -12,6 +13,8 @@ tags:
   - package
   - SPD
   - manifold
+  - fMRI
+  - MGLMRiem
 image:
   placement: 1
   focal_point: "Left"
@@ -100,7 +103,7 @@ neurobase::ortho2(subject1, s1_mask, w=90, mfrow = c(1,3))</code></pre>
 <pre class="r"><code>neurobase::ortho2(s1_roi, w=90, mfrow = c(1,3))</code></pre>
 <p><img src="/post/2020-03-02-manifold-regression-2/index_files/figure-html/unnamed-chunk-9-2.png" width="672" /></p>
 <p>In the first of the above two figures, you see a small red square indicating the location of the ROI. In the second figure, we have zoomed in on all three plots to show only the <span class="math inline">\(2 \times 2 \times 2\)</span> ROI.</p>
-<p>Let <span class="math inline">\(V_1,V_2,...,V_n\)</span> represent the voxels in the ROI (for this example, <span class="math inline">\(n=8\)</span>). For a given subject, and a given voxel (for example <span class="math inline">\(V_1\)</span>), the time series of fMRI measurements looks like this:</p>
+<p>Let <span class="math inline">\(v_1,v_2,...,v_n\)</span> represent the voxels in the ROI (for this example, <span class="math inline">\(n=8\)</span>). For a given subject, and a given voxel (for example <span class="math inline">\(v_1\)</span>), the time series of fMRI measurements looks like this:</p>
 <pre class="r"><code>timeseries_x = subject1@.Data[32,49,1,]
 timeseries_t = 1:dim(subject1@.Data)[4]
 
@@ -109,13 +112,13 @@ plot(x=timeseries_t, y=timeseries_x, type=&#39;l&#39;, main=&quot;fMRI time seri
 <p>You can see that the time series is non-stationary (the trend in this time series is downwards as time increases). This could be problematic, and one way to address this would be to transform the time series into one which is stationary (using differencing, or subtraction of the mean line). We will leave the time series untouched however, in order to keep things simple.</p>
 <p>We would like to be working with symmetric positive definite (SPD) matrices, and so we will use time series covariance matrices. To find the time series covariance matrix for an individual, we calculate:</p>
 <span class="math display">\[\begin{bmatrix}
-cov(V_1, V_1) &amp; cov(V_2, V_1)  &amp; \cdots &amp; cov(V_n, V_1) \\
+cov(v_1, v_1) &amp; cov(v_2, v_1)  &amp; \cdots &amp; cov(v_n, v_1) \\
 
-cov(V_1, V_2) &amp; cov(V_2, V_2) &amp; \cdots &amp; cov(V_n, V_2) \\
+cov(v_1, v_2) &amp; cov(v_2, v_2) &amp; \cdots &amp; cov(v_n, v_2) \\
 
 \vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
 
-cov(V_1, V_n) &amp; cov(V_2, V_n) &amp; \cdots &amp; cov(V_n, V_n)
+cov(v_1, v_n) &amp; cov(v_2, v_n) &amp; \cdots &amp; cov(v_n, v_n)
 \end{bmatrix}\]</span>
 <p>We can use the symmetric property of the covariance matrix to reduce the number of calculations we need to make. Note that for a correlation matrix, we could also set the diagonal to 1, saving even more computations. This can be relevant in saving computing time for large matrices and large numbers of subjects.</p>
 <p>Let’s compute the covariance matrix for each of the 23 subjects:</p>
@@ -163,7 +166,7 @@ dim(Y)</code></pre>
 <div id="manifold-regression" class="section level2">
 <h2>Manifold Regression</h2>
 <p>We have 23 observations of <span class="math inline">\(8 \times 8\)</span> SPD matrices. Each of these matrices belongs to either a male or a female subject. We will hypothesise that there is a significant difference from the baseline (<span class="math inline">\(P\)</span>) between the ROI covariance matrices for male and female subjects, when controlling for age. We will test this hypothesis using manifold regression (Kim et al. 2014), and permutation testing (such as described in Fletcher 2011).</p>
-<p>The model we are considering is <span class="math inline">\(Y = P + x_1V_1 + x_2V_2\)</span>, where <span class="math inline">\(Y\)</span> is an SPD matrix, <span class="math inline">\(P\)</span> is a base point on the manifold (also an SPD matrix), <span class="math inline">\(V_i\)</span> are symmetric matrices, <span class="math inline">\(x_i\)</span> are the covariates. <span class="math inline">\(x_1\)</span> is an indicator variable which is 0 when subject <span class="math inline">\(i\)</span> is male, and 1 when female. <span class="math inline">\(x_2\)</span> is the age in years, standardized by subtracting the mean age and dividing by the standard deviation of age. The “+”&quot; sign indicates the exponential map projecting <span class="math inline">\(x_iV_i\)</span> onto the SPD manifold at the preceeding base point.</p>
+<p>The model we are considering is <span class="math inline">\(Y = Exp(P, x_1V_1 + x_2V_2)\)</span>, where <span class="math inline">\(Y\)</span> is an SPD matrix, <span class="math inline">\(P\)</span> is a base point on the manifold (also an SPD matrix), <span class="math inline">\(V_i\)</span> are symmetric matrices which represent the coefficients of the <span class="math inline">\(x_i\)</span>, <span class="math inline">\(x_i\)</span> are the covariates. <span class="math inline">\(x_1\)</span> is an indicator variable which is 0 when subject <span class="math inline">\(i\)</span> is male, and 1 when female. <span class="math inline">\(x_2\)</span> is the age in years, standardized by subtracting the mean age and dividing by the standard deviation of age. <span class="math inline">\(Exp(P,\cdot)\)</span> indicates the exponential map projecting <span class="math inline">\(\cdot\)</span> onto the SPD manifold at the base point <span class="math inline">\(P\)</span>.</p>
 <pre class="r"><code># setup the Male/Female indicator variable and age variable
 sex = matrix(rep(c(0,0,1,1,0,0,1,1,0,0,0,0,
                    0,0,1,1,0,1,1,1,1,1,1), each=1), nrow=1)
@@ -236,6 +239,7 @@ for(i in 1:500) {
 <p>The red line indicates our observed <span class="math inline">\(R^2\)</span> value. So you can see that even though 10% of the variability could be explained by the model, our results are not statistically significant. Is this surprising?</p>
 <p>Not really, the effect size is small, and so we would need a reasonably large sample size to have any certainty in the results. In our case, we are fitting 2 covariates (plus one base point) using only 23 observations. Thus, unless the effect size was quite large, we would not expect to find any statistically significant covariate effects.</p>
 <p>To investigate further, we would need a larger sample size. It would also be beneficial to include more covariates which might have an impact on brain connectivity (such as education level, socio-economic status, race, and genetic factors).</p>
+<p>I hope this will help you with applying Manifold Regression to your own research problems.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
