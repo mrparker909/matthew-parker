@@ -1,0 +1,12 @@
+{{ if and (not site.Params.disable_codefolding) (not .Params.disable_codefolding) (not site.Params.codefolding_nobutton) (not .Params.codefolding_nobutton) (in (string .Content) "</pre>") }}
+<div id="code-folding-buttons" class="btn-group pull-right btn-xs">
+  <div id="code-folding-buttons" class="btn-group">
+    <button type="button" class="btn btn-outline-info" data-_extension-text-contrast="">
+      <span><a id="rmd-show-all-code" href="#">Show All Code</a></span>
+    </button>
+    <button type="button" class="btn btn-outline-warning ml-2" data-_extension-text-contrast="">
+      <span><a id="rmd-hide-all-code" href="#">Hide All Code</a></span>
+    </button>
+  </div>
+</div>
+{{ end }}

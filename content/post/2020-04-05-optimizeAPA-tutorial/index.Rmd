@@ -1,0 +1,327 @@
+---
+title: 'optimizeAPA Tutorial (Arbitrary Precision Optimization)'
+author: Matthew Parker
+date: '2020-04-05'
+categories:
+  - R
+  - Optimization
+tags:
+  - R
+  - arbitrary precision arithmetic
+  - arbitrary precision optimization
+  - multiparameter
+  - Rmpfr
+  - optimization
+  - tutorial
+image:
+  placement: 1
+  focal_point: "Left"
+  preview_only: false
+
+disable_codefolding: false
+---
+
+
+```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
+set.seed(12345)
+library(ggplot2)
+library(optimizeAPA)
+library(gmp)
+library(Rmpfr)
+```
+
+<tt>optimizeAPA</tt> is an R package which allows for multi-parameter optimization. That means you can use it to find the maximum (or the minimum) value of a function with many input values. What makes <tt>optimizeAPA</tt> unique? It works with arbitrary precision arithmetic.
+
+## Why use <tt>optimizeAPA</tt>?
+
+- [1)](#apa-and-napa) works with both **APA** and **NAPA** optimization
+- [2)](#single-and-multi-parameter) works with both **single parameter** and **multi-parameter** functions
+- [3)](#save-an-output-file) save an **output file** at each iteration
+- [4)](#keep-values) allows you to **keep every value** and input visited
+- [5)](#plot-convergence) easily **plot the convergence path** with a single function call
+
+<i>**Note**: APA stands for "arbitrary precision arithmetic", while NAPA stands for "non arbitrary precision arithmetic"</i>
+
+### APA and NAPA
+
+Using one package for both your APA and NAPA optimization can make troubleshooting and problem solving much easier. You can check the math and logic of your function without arbitrary precision first, and then implement the same function with arbitrary precision. The two functions you will want to use for optimization are <tt>optimizeAPA::optim_DFP_NAPA()</tt> and <tt>optimizeAPA::optim_DFP_APA()</tt>. DFP stands for ["Davidon-Fletcher-Powell"](https://en.wikipedia.org/wiki/Davidon%E2%80%93Fletcher%E2%80%93Powell_formula), and is the only optimization algorithm implemented in the <tt>optimizeAPA</tt> package (at the time of writing anyways).
+
+### Single and Multi-parameter
+
+Other options exist for single parameter optimization (for example [Rmpfr::optimizeR()](../2018-12-12-rmpfr-tutorial#usage-with-optim)), however, with <tt>optimizeAPA</tt> you can use the same functions for both single and multi-parameter function optimization. This saves you formatting your data and function multiple times for the various standards and formats employed by different packages.
+
+
+### Save an Output File
+
+Suppose you are not sure if your function will converge within the given number of iterations (the default is <tt>maxSteps=100</tt>). Then you can save an output file by setting <tt>outFile="output_filename.csv"</tt>. This can then be used to give better starting values for a second run of the algorithm.
+
+
+```{r eval=F}
+optimizeAPA::optim_DFP_APA(starts,func,outFile="output_filename.csv",maxSteps=10)
+```
+
+### Keep Values
+
+By setting <tt>keepValues=T</tt> in the function call, you can tell the optimization algorithm that you are interested in more than just the last visited function inputs and function value. For example:
+
+```{r eval=F}
+optimizeAPA::optim_DFP_APA(starts,func,keepValues = T)
+```
+
+There are many reasons why you might want to do this, such as looking for convergence issues, determining better stopping criteria for future simulations (eg: by setting <tt>tolerance=10^-3</tt>), etc.
+
+
+```{r eval=F}
+optimizeAPA::optim_DFP_APA(starts,func,tolerance=10^-3)
+```
+
+<i>**Note**: the default maximum number of iterations to save when </i><tt>keepValues=T</tt><i> is 100, if you want to keep every value, then set </i><tt>Memory=X</tt><i>, where </i><tt>X</tt><i> is equal to the number you have set for </i><tt>maxSteps</tt><i>.</i>
+
+### Plot Convergence
+
+When you set <tt>keepValues=T</tt>, you can make use of a helper function called <tt>optimizeAPA::plotConvergence()</tt>. This allows you to view the convergence paths of each input parameter. This can be a very useful visual diagnostic tool.
+
+
+```{r eval=F}
+op <- optimizeAPA::optim_DFP_APA(starts,func,keepValues = T)
+optimizeAPA::plotConvergence(op)
+```
+
+
+
+## Rmpfr
+
+I have covered the R package <tt>Rmpfr</tt> [previously](../2018-12-12-rmpfr-tutorial), and you may want to read up on [the package](https://CRAN.R-project.org/package=Rmpfr) if you are interested in writing your own functions to optimize. I will give you a few examples [here](#examples), which you should be able to modify for your own needs.
+
+## Install <tt>optimizeAPA</tt>
+
+<tt>optimizeAPA</tt> is available on [github](https://github.com/mrparker909/optimizeAPA), and can be installed using the <tt>remotes</tt> [package](https://remotes.r-lib.org/):
+
+```{r eval=F}
+remotes::install_github("mrparker909/optimizeAPA")
+```
+
+## Examples
+
+For the folowing examples, we will use these libraries:
+
+```{r eval=F}
+library(ggplot2)
+library(optimizeAPA)
+```
+
+### Single Parameter Function
+
+First, let's define a regular function <tt>F1</tt> to optimize:
+
+```{r}
+F1 <- function(par) {
+  (1+par) * sin(2*(par-3)*pi) * exp(-(par-3)^4)
+}
+```
+
+
+Let's plot the function, so we have some idea of what we're looking at:
+
+```{r echo=TRUE, fig.cap="Plot of single parameter function.", fig.width=5, fig.height=3}
+x    = seq(0,6,0.01)
+y    = sapply(X=x, FUN=F1)
+dat1 = data.frame(x=x,y=y)
+
+ggplot(data=dat1, aes(x=x,y=y)) + 
+  geom_line() + 
+  ggtitle("Plot of F1(x)") + 
+  ylab("F1") + 
+  theme_classic()
+```
+
+We want to find the maximum value $F_0$ of the function <tt>F1</tt>, and we want to know what input value $x_0$ gives us that maximum value. Since the algorithm searches for the minimum, we will input $-F1$ to find the maximum.
+
+Notice that the maximum is somewhere between $x=3$ and $x=4$, so let's set $x=3.5$ as our starting value. 
+
+First, the NAPA version:
+
+```{r cache=T}
+F1neg = function(par) { -1*F1(par) }
+op1 <- optimizeAPA::optim_DFP_NAPA(starts=3.5, 
+                                   func = F1neg, 
+                                   keepValues = T, 
+                                   tolerance=10^-3)
+```
+
+Let's look at the path to convergence:
+
+```{r fig.cap="Plot of convergence for single parameter function F1 (NAPA).", fig.width=6, fig.height=6, warning=F, message=F}
+optimizeAPA::plotConvergence(op1)
+```
+
+So the maximum value of the function (found after 11 iterations of the algorithm) is $F_0 = F1(3.2543) = 4.235$.
+
+Now we will do the same thing but using arbitrary precision!
+
+
+```{r}
+# note that precBits allows you to specify the number 
+# of bits of precision in the calculation
+F2 <- function(par, precBits=53) {
+  PI = Rmpfr::Const("pi", precBits)
+  (1+par) * sin(2*(par-3)*PI) * exp(-(par-3)^4)
+}
+```
+
+Now, the APA optimization:
+
+```{r cache=T, warning=F, message=F}
+F2neg = function(par, precBits) { -1*F2(par,precBits) }
+op2 <- optimizeAPA::optim_DFP_APA(starts=3.5, 
+                                  func = F2neg, 
+                                  keepValues = T, 
+                                  tolerance=10^-3, 
+                                  precBits = 64)
+```
+
+Let's look at the path to convergence:
+
+```{r fig.cap="Plot of convergence for single parameter function F2 (APA).", fig.width=6, fig.height=6}
+optimizeAPA::plotConvergence(op2)
+```
+
+So the convergence plots look the same, but let's compare the values found by the two algorithms:
+
+```{r}
+knitr::kable(data.frame(algorithm = c("F1: NAPA",   "F2: APA"),
+           F_0 = c(Rmpfr::format(-1*op1$f[[1]]),
+                   Rmpfr::format(-1*op2$f[[1]])),
+           x_0 = c(Rmpfr::format(op1$x[[1]]),    
+                   Rmpfr::format(op2$x[[1]]))))
+```
+
+You can see that we only have 6 decimal places of precision from the NAPA algorithm (corresponding to 53 bits of precision), whereas the APA algorithm gave us 20 decimal places of precision (corresponding to the 64 bits of precision we chose when we set <tt>precBits=64</tt>).
+
+### Multi-Parameter Function
+
+Functions of a single parameter are not nearly as exciting as functions with many inputs. Let's augment our previous function <tt>F1</tt>, so that it takes two inputs.
+
+
+```{r}
+# now par is a vector of length 2
+F3 <- function(par) {
+  x = par[1]
+  y = par[2]
+  (1+x) * sin(2*(x-3)*pi) * exp(-(x-3)^4) *
+    (2+y) * sin(2*(y-2)*pi) * exp(-(y-2)^4)
+}
+```
+
+
+```{r fig.cap="Plot of multi-parameter function."}
+# here we define an x,y coordinate grid, and we
+# calculate z=F3(x,y) at each point of the grid
+x = seq(1,5,length=50)
+y = seq(0,4,length=50)
+z = outer(x,y,FUN = Vectorize(function(x,y) { F3(par=c(x,y)) }))
+
+par(mai=c(0.4,0,0.1,0))
+persp(x,y,z,col="dodgerblue",border="navy",
+      theta=30,phi=22,shade=0.75,
+      xaxs="i",yaxs="i",
+      ltheta=-55,lphi=30)
+```
+
+Now let's find the maximum value of $F3$, and the pair of values $x_0$ and $y_0$ which maximize the function!
+
+First, we need a good starting point, so let's use the $x$ and $y$ values which gave the largest $z$:
+
+```{r}
+which(z==max(z), arr.ind = T)
+```
+
+So the starting values are $x[29], y[29]$ = `r paste0("(",round(x[29],8) ,",", round(y[29],8),")")`
+
+```{r cache=T}
+F3neg = function(par) { -1*F3(par) }
+op3 <- optimizeAPA::optim_DFP_NAPA(starts=c(x[29],y[29]), 
+                                   func = F3neg, 
+                                   keepValues = T, 
+                                   tolerance=10^-3)
+```
+
+Again we can look at the convergence plot:
+
+```{r fig.cap="Plot of convergence for multi-parameter function F3 (NAPA).", fig.width=9, fig.height=9}
+# this time we disable the function labels for legibility
+# using: labels = F
+optimizeAPA::plotConvergence(op3, labels = F)
+```
+
+The algorithm converged after `r op3$steps` iterations. We can get at the maximum function value and at the values of $x$ and $y$ which jointly maximize the function:
+
+```{r}
+-1*op3$f[[1]] # note that we multiply by -1 to undo our previous transformation
+op3$x[[1]]    # note that "x" here denotes c(x,y)
+```
+
+The maximum value of $F3$ is `r -1*op3$f[[1]]`, and that value is attained by $x=$ `r op3$x[[1]][1]`, and $y=$ `r op3$x[[1]][2]`.
+
+Let's make $F3$ APA:
+
+
+```{r}
+F4 <- function(par, precBits=53) {
+  x = par[1]
+  y = par[2]
+  PI = Rmpfr::Const("pi", precBits)
+  (1+x) * sin(2*(x-3)*PI) * exp(-(x-3)^4) *
+    (2+y) * sin(2*(y-2)*PI) * exp(-(y-2)^4)
+}
+```
+
+```{r cache=T}
+F4neg = function(par, precBits) { -1*F4(par, precBits) }
+op4 <- optimizeAPA::optim_DFP_APA(starts=c(x[29],y[29]), 
+                                  func = F4neg, 
+                                  keepValues = T, 
+                                  tolerance=10^-3,
+                                  precBits=120)
+```
+
+This time the convergence plot is slightly different, and the convergence took `r op4$steps` steps to achieve:
+
+```{r fig.cap="Plot of convergence for multi-parameter function F4 (APA).", fig.width=9, fig.height=9}
+# this time we disable the function labels for legibility
+# using: labels = F
+optimizeAPA::plotConvergence(op4, labels = F)
+```
+
+```{r}
+knitr::kable(data.frame(algorithm = c("F3: NAPA",   "F4: APA"),
+           F_0 = c(Rmpfr::format(-1*op3$f[[1]]),
+                   Rmpfr::format(-1*op4$f[[1]])),
+           x_0 = c(Rmpfr::format(op3$x[[1]][1]),    
+                   Rmpfr::format(op4$x[[1]][1])),
+           y_0 = c(Rmpfr::format(op3$x[[1]][2]),    
+                   Rmpfr::format(op4$x[[1]][2]))))
+```
+
+Of course you can use these methods on functions of many more variables, just use <tt>par</tt> as a vector to hold each of the parameters to be optimized over.
+
+As a word of caution, changing <tt>tolerance</tt> is essentially setting the accuracy of the optimization (where as changing <tt>precBits</tt> is setting the precision). This means that decreasing <tt>tolerance</tt> can improve the results of the algorithm, but be warned that it likely will also take more iterations to converge. Have a look at the gradient field of the optimization output for some idea of how close to the maximum (or minimum) the algorithm has gotten:
+
+```{r}
+op4$grad[[1]]
+```
+
+Note that the closer to zero each of the values in the gradient is, the closer the algorithm is to a local minimum or maximum.
+
+## Conclusions
+
+There is a ton more that you can do with <tt>optimizeAPA</tt>, and the package is still being developed, so expect more in the future. You can have a look at the package [README](https://github.com/mrparker909/optimizeAPA) for a few more examples.
+
+## References
+
+Davidon, W. (1959). Variable metric method for minimization. Technical Report ANL-5990, 4252678.
+
+
+
+
+
