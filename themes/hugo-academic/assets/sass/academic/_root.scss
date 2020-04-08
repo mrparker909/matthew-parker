@@ -30,6 +30,11 @@ body {
   }
 }
 
+/* fixing codefolding prpblems on mobile */
+.dropdown-backdrop {
+    position: static;
+}
+
 .max-width-640 {
   max-width: 640px;
 }
