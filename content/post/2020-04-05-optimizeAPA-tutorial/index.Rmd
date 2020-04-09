@@ -95,7 +95,7 @@ I have covered the R package <tt>Rmpfr</tt> [previously](../2018-12-12-rmpfr-tut
 
 ## Install <tt>optimizeAPA</tt>
 
-<tt>optimizeAPA</tt> is available on [github](https://github.com/mrparker909/optimizeAPA), and can be installed using the <tt>remotes</tt> [package](https://remotes.r-lib.org/):
+<tt>optimizeAPA</tt> is available on [github](https://github.com/mrparker909/optimizeAPA), and can be installed using the [<tt>remotes</tt> package](https://remotes.r-lib.org/):
 
 ```{r eval=F}
 remotes::install_github("mrparker909/optimizeAPA")
@@ -123,7 +123,7 @@ F1 <- function(par) {
 
 Let's plot the function, so we have some idea of what we're looking at:
 
-```{r echo=TRUE, fig.cap="Plot of single parameter function.", fig.width=5, fig.height=3}
+```{r fig1, echo=TRUE, fig.cap="Plot of single parameter function.", fig.width=5, fig.height=3}
 x    = seq(0,6,0.01)
 y    = sapply(X=x, FUN=F1)
 dat1 = data.frame(x=x,y=y)
@@ -137,7 +137,7 @@ ggplot(data=dat1, aes(x=x,y=y)) +
 
 We want to find the maximum value $F_0$ of the function <tt>F1</tt>, and we want to know what input value $x_0$ gives us that maximum value. Since the algorithm searches for the minimum, we will input $-F1$ to find the maximum.
 
-Notice that the maximum is somewhere between $x=3$ and $x=4$, so let's set $x=3.5$ as our starting value. 
+Notice from Figure 1 that the maximum is somewhere between $x=3$ and $x=4$, so let's set $x=3.5$ as our starting value. 
 
 First, the NAPA version:
 

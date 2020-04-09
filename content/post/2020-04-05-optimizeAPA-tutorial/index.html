@@ -68,7 +68,7 @@ optimizeAPA::plotConvergence(op)</code></pre>
 </div>
 <div id="install-optimizeapa" class="section level2">
 <h2>Install <tt>optimizeAPA</tt></h2>
-<p><tt>optimizeAPA</tt> is available on <a href="https://github.com/mrparker909/optimizeAPA">github</a>, and can be installed using the <tt>remotes</tt> <a href="https://remotes.r-lib.org/">package</a>:</p>
+<p><tt>optimizeAPA</tt> is available on <a href="https://github.com/mrparker909/optimizeAPA">github</a>, and can be installed using the <a href="https://remotes.r-lib.org/"><tt>remotes</tt> package</a>:</p>
 <pre class="r"><code>remotes::install_github(&quot;mrparker909/optimizeAPA&quot;)</code></pre>
 </div>
 <div id="examples" class="section level2">
@@ -92,14 +92,14 @@ ggplot(data=dat1, aes(x=x,y=y)) +
   ggtitle(&quot;Plot of F1(x)&quot;) + 
   ylab(&quot;F1&quot;) + 
   theme_classic()</code></pre>
-<div class="figure"><span id="fig:unnamed-chunk-8"></span>
-<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-8-1.png" alt="Plot of single parameter function." width="480" />
+<div class="figure"><span id="fig:fig1"></span>
+<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/fig1-1.png" alt="Plot of single parameter function." width="480" />
 <p class="caption">
 Figure 1: Plot of single parameter function.
 </p>
 </div>
 <p>We want to find the maximum value <span class="math inline">\(F_0\)</span> of the function <tt>F1</tt>, and we want to know what input value <span class="math inline">\(x_0\)</span> gives us that maximum value. Since the algorithm searches for the minimum, we will input <span class="math inline">\(-F1\)</span> to find the maximum.</p>
-<p>Notice that the maximum is somewhere between <span class="math inline">\(x=3\)</span> and <span class="math inline">\(x=4\)</span>, so let’s set <span class="math inline">\(x=3.5\)</span> as our starting value.</p>
+<p>Notice from Figure 1 that the maximum is somewhere between <span class="math inline">\(x=3\)</span> and <span class="math inline">\(x=4\)</span>, so let’s set <span class="math inline">\(x=3.5\)</span> as our starting value.</p>
 <p>First, the NAPA version:</p>
 <pre class="r"><code>F1neg = function(par) { -1*F1(par) }
 op1 &lt;- optimizeAPA::optim_DFP_NAPA(starts=3.5, 
@@ -108,8 +108,8 @@ op1 &lt;- optimizeAPA::optim_DFP_NAPA(starts=3.5,
                                    tolerance=10^-3)</code></pre>
 <p>Let’s look at the path to convergence:</p>
 <pre class="r"><code>optimizeAPA::plotConvergence(op1)</code></pre>
-<div class="figure"><span id="fig:unnamed-chunk-10"></span>
-<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-10-1.png" alt="Plot of convergence for single parameter function F1 (NAPA)." width="576" />
+<div class="figure"><span id="fig:unnamed-chunk-9"></span>
+<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-9-1.png" alt="Plot of convergence for single parameter function F1 (NAPA)." width="576" />
 <p class="caption">
 Figure 2: Plot of convergence for single parameter function F1 (NAPA).
 </p>
@@ -131,8 +131,8 @@ op2 &lt;- optimizeAPA::optim_DFP_APA(starts=3.5,
                                   precBits = 64)</code></pre>
 <p>Let’s look at the path to convergence:</p>
 <pre class="r"><code>optimizeAPA::plotConvergence(op2)</code></pre>
-<div class="figure"><span id="fig:unnamed-chunk-13"></span>
-<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-13-1.png" alt="Plot of convergence for single parameter function F2 (APA)." width="576" />
+<div class="figure"><span id="fig:unnamed-chunk-12"></span>
+<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-12-1.png" alt="Plot of convergence for single parameter function F2 (APA)." width="576" />
 <p class="caption">
 Figure 3: Plot of convergence for single parameter function F2 (APA).
 </p>
@@ -187,8 +187,8 @@ persp(x,y,z,col=&quot;dodgerblue&quot;,border=&quot;navy&quot;,
       theta=30,phi=22,shade=0.75,
       xaxs=&quot;i&quot;,yaxs=&quot;i&quot;,
       ltheta=-55,lphi=30)</code></pre>
-<div class="figure"><span id="fig:unnamed-chunk-16"></span>
-<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-16-1.png" alt="Plot of multi-parameter function." width="672" />
+<div class="figure"><span id="fig:unnamed-chunk-15"></span>
+<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-15-1.png" alt="Plot of multi-parameter function." width="672" />
 <p class="caption">
 Figure 4: Plot of multi-parameter function.
 </p>
@@ -208,8 +208,8 @@ op3 &lt;- optimizeAPA::optim_DFP_NAPA(starts=c(x[29],y[29]),
 <pre class="r"><code># this time we disable the function labels for legibility
 # using: labels = F
 optimizeAPA::plotConvergence(op3, labels = F)</code></pre>
-<div class="figure"><span id="fig:unnamed-chunk-19"></span>
-<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-19-1.png" alt="Plot of convergence for multi-parameter function F3 (NAPA)." width="864" />
+<div class="figure"><span id="fig:unnamed-chunk-18"></span>
+<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-18-1.png" alt="Plot of convergence for multi-parameter function F3 (NAPA)." width="864" />
 <p class="caption">
 Figure 5: Plot of convergence for multi-parameter function F3 (NAPA).
 </p>
@@ -240,8 +240,8 @@ op4 &lt;- optimizeAPA::optim_DFP_APA(starts=c(x[29],y[29]),
 <pre class="r"><code># this time we disable the function labels for legibility
 # using: labels = F
 optimizeAPA::plotConvergence(op4, labels = F)</code></pre>
-<div class="figure"><span id="fig:unnamed-chunk-23"></span>
-<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-23-1.png" alt="Plot of convergence for multi-parameter function F4 (APA)." width="864" />
+<div class="figure"><span id="fig:unnamed-chunk-22"></span>
+<img src="/post/2020-04-05-optimizeAPA-tutorial/index_files/figure-html/unnamed-chunk-22-1.png" alt="Plot of convergence for multi-parameter function F4 (APA)." width="864" />
 <p class="caption">
 Figure 6: Plot of convergence for multi-parameter function F4 (APA).
 </p>
