@@ -21,7 +21,6 @@ image:
 disable_codefolding: false
 ---
 
-
 ```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
 set.seed(12345)
 library(ggplot2)
