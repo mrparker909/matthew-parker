@@ -21,13 +21,14 @@ image:
 disable_codefolding: false
 ---
 
-
 ```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
 set.seed(12345)
 library(ggplot2)
 library(optimizeAPA)
 library(gmp)
 library(Rmpfr)
+library(knitr)
+library(rgl)
 ```
 
 <tt>optimizeAPA</tt> is an R package which allows for multi-parameter optimization. That means you can use it to find the maximum (or the minimum) value of a function with many input values. What makes <tt>optimizeAPA</tt> unique? It works with arbitrary precision arithmetic.
@@ -106,8 +107,9 @@ remotes::install_github("mrparker909/optimizeAPA")
 For the folowing examples, we will use these libraries:
 
 ```{r eval=F}
-library(ggplot2)
-library(optimizeAPA)
+library(ggplot2)     # for 2d plots
+library(optimizeAPA) # for functional optimization
+library(rgl)         # for interactive 3d plots
 ```
 
 ### Single Parameter Function
@@ -151,8 +153,8 @@ op1 <- optimizeAPA::optim_DFP_NAPA(starts=3.5,
 
 Let's look at the path to convergence:
 
-```{r fig.cap="Plot of convergence for single parameter function F1 (NAPA).", fig.width=6, fig.height=6, warning=F, message=F}
-optimizeAPA::plotConvergence(op1)
+```{r fig.cap="Plot of convergence for single parameter function F1 (NAPA).", fig.width=10, fig.height=4, warning=F, message=F}
+optimizeAPA::plotConvergence(op1, flip_axes=T)
 ```
 
 So the maximum value of the function (found after 11 iterations of the algorithm) is $F_0 = F1(3.2543) = 4.235$.
@@ -182,8 +184,8 @@ op2 <- optimizeAPA::optim_DFP_APA(starts=3.5,
 
 Let's look at the path to convergence:
 
-```{r fig.cap="Plot of convergence for single parameter function F2 (APA).", fig.width=6, fig.height=6}
-optimizeAPA::plotConvergence(op2)
+```{r fig.cap="Plot of convergence for single parameter function F2 (APA).", fig.width=10, fig.height=4}
+optimizeAPA::plotConvergence(op2, flip_axes = T)
 ```
 
 So the convergence plots look the same, but let's compare the values found by the two algorithms:
@@ -248,10 +250,10 @@ op3 <- optimizeAPA::optim_DFP_NAPA(starts=c(x[29],y[29]),
 
 Again we can look at the convergence plot:
 
-```{r fig.cap="Plot of convergence for multi-parameter function F3 (NAPA).", fig.width=9, fig.height=9}
+```{r fig.cap="Plot of convergence for multi-parameter function F3 (NAPA).", fig.width=10, fig.height=4.5}
 # this time we disable the function labels for legibility
 # using: labels = F
-optimizeAPA::plotConvergence(op3, labels = F)
+optimizeAPA::plotConvergence(op3, labels = F, flip_axes = T)
 ```
 
 The algorithm converged after `r op3$steps` iterations. We can get at the maximum function value and at the values of $x$ and $y$ which jointly maximize the function:
@@ -262,6 +264,40 @@ op3$x[[1]]    # note that "x" here denotes c(x,y)
 ```
 
 The maximum value of $F3$ is `r -1*op3$f[[1]]`, and that value is attained by $x=$ `r op3$x[[1]][1]`, and $y=$ `r op3$x[[1]][2]`.
+
+We can also visualize what has happened by plotting the convergence path on the 3D plot of the function:
+
+
+```{r eval=F}
+# here we define an x,y coordinate grid, and we
+# calculate z=F3(x,y) at each point of the grid
+x = seq(3.23,3.29,length=50)
+y = seq(2.23,2.29,length=50)
+z = outer(x,y,FUN = Vectorize(function(x,y) { F3(par=c(x,y)) }))
+
+# using rgl
+persp3d(x,y,z,col="dodgerblue",border="navy",
+        theta=30,phi=22,shade=0.75,
+        xaxs="i",yaxs="i",
+        ltheta=-55,lphi=30, alpha=0.45)
+lines3d(x=unlist(op3$x)[c(T,F)],
+        y=unlist(op3$x)[c(F,T)],
+        z=-1*unlist(op3$f), 
+        col="blue", size=5)
+points3d(x=unlist(op3$x)[c(T,F)],
+         y=unlist(op3$x)[c(F,T)],
+         z=-1*unlist(op3$f), 
+         col="red", size=5)
+rgl.postscript(filename = "img/rgl-snapshot.pdf", fmt = "pdf")
+```
+
+
+```{r echo=F, fig.cap="Plot of multi-parameter function (zoomed near maximum). Visited points shown in red, path of convergence traced in blue."}
+
+knitr::include_graphics("img/convergence-path-zoomed.png")
+```
+
+
 
 Let's make $F3$ APA:
 
@@ -287,10 +323,10 @@ op4 <- optimizeAPA::optim_DFP_APA(starts=c(x[29],y[29]),
 
 This time the convergence plot is slightly different, and the convergence took `r op4$steps` steps to achieve:
 
-```{r fig.cap="Plot of convergence for multi-parameter function F4 (APA).", fig.width=9, fig.height=9}
+```{r fig.cap="Plot of convergence for multi-parameter function F4 (APA).", fig.width=10, fig.height=4.5}
 # this time we disable the function labels for legibility
 # using: labels = F
-optimizeAPA::plotConvergence(op4, labels = F)
+optimizeAPA::plotConvergence(op4, labels = F, flip_axes = T)
 ```
 
 ```{r}
