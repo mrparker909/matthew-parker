@@ -1,0 +1,172 @@
+---
+title: 'Bootstrap Tutorial in R'
+author: Matthew Parker
+date: '2020-06-26'
+categories:
+  - R
+  - Statistics
+  - Tutorial
+tags:
+  - R
+  - bootstrapping
+  - standard deviation
+  - sampling distribution
+  - variability
+  - tutorial
+  - distribution
+image:
+  placement: 1
+  focal_point: "Left"
+  preview_only: false
+
+disable_codefolding: false
+---
+
+```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
+set.seed(12345)
+library(ggplot2)
+```
+
+Bootstrapping is a statistical technique for analyzing the distributional properties of sample data (such as variability and bias). It has many uses, and is generally quite easy to implement. Continue reading to learn how you can perform a bootstrap procedure in R!
+
+## What is bootstrapping?
+
+The bootstrap essentially uses re-sampling of a set of sample data in order to observe properties of the distribution of the data. For each re-sampling of the data (each "bootstrap sample"), you sample with replacement from the sample data, and compute the statistic of interest on the bootstrap sample (the bootstrap statistic). This provides you with a set of bootstrap statistics from which you can analyze the estimated sampling distribution of the statistic. 
+
+## Bootstrap Example
+
+```{r echo=F, fig.width=4}
+knitr::include_graphics("img/black_labrador_puppy.png")
+```
+
+Let's look at a very simple example. Suppose that you have had fifteen people independently measure the length (in meters) of a particular dog named Oscar, and you are interested in the standard deviation of the measurements. It is easy to calculate the estimated standard deviation of the measurements, but how can you estimate the accuracy of the estimated standard deviation? 
+
+{{% alert note %}}
+**What is the difference between standard deviation, and estimated standard deviation?** 
+
+Standard deviation refers to the dispersion of a distribution about its mean value; Estimated standard deviation refers to the observed deviation in a particular sample, and so gives an estimate of standard deviation.
+{{% /alert %}}
+
+For the sake of illustration, we know ahead of time that Oscar is 1.15 meters long, and depending on the person who measures him (and how much extra hair they measure on his tail) the standard deviation is 0.05, with the measurement error following a Normal distribution.
+
+```{r}
+set.seed(12345)
+oscarL = round(rnorm(n = 15, mean = 1.15, sd = 0.05),3)
+
+# 15 measurements of Oscar's length in meters
+oscarL
+```
+
+The estimated standard deviation is then:
+
+```{r}
+sd(oscarL)
+```
+
+So how do we describe the error associated with the estimated standard deviation? Well, we can increase our effective sample size for our statistic from 1 up to $B$ by resampling our data $B$ times (to obtain $B$ bootstrap estimates for standard deviation). Let's see what happens when we resample 100, 1000, and 10000 times.
+
+First we define a bootstrap function to make our lives easier:
+
+```{r}
+# Define the function BOOTSTRAP() to do our bootstrapping.
+BOOTSTRAP <- function(data, B) {
+  # define the statistic to be calculated,
+  # in our case it is just the standard deviation
+  calc_statistic <- function(sample_data) {
+    sd(sample_data)
+  }
+  
+  # here we resample the data, and calculate the bootstrap statistic
+  BOOT_STAT <- function() {
+    bootstrap_sample = sample(x = data, size = length(data),replace = T)
+    calc_statistic(bootstrap_sample)
+  }
+  
+  # here we perform the bootstrap B times
+  s = replicate(n = B, expr = BOOT_STAT(), simplify = T)
+  return(s)
+}
+```
+
+Now we perform the bootstrap:
+
+```{r}
+set.seed(53421) # setting seed for bootstrap reproducibility
+
+resamples = c(1e2, 1e3, 1e4) # B = 100, 1000, 10000
+
+# calculate the bootstrap standard deviations
+bootstrap_sd  = lapply(X = resamples, FUN = BOOTSTRAP, data=oscarL)
+
+# calculate the three bootstrap standard deviations of 
+# the estimated standard deviation
+bootstrap_sdsd = sapply(X = bootstrap_sd, FUN = sd)
+
+# save the results to a data.frame
+bootstrap_df = data.frame(
+  BootstrapSamples = format(resamples, scientific = F), 
+  StandardDeviation = bootstrap_sdsd)
+```
+
+```{r}
+bootstrap_df
+```
+
+Since the standard deviation of the estimated standard deviation is not changing too drastically with increasing bootstrap samples, we'll go with the results from 10000 bootstrap samples. This gives us an estimated standard deviation of `r sprintf("%.4f", sd(oscarL))` $\pm$ `r sprintf("%.4f", bootstrap_df$StandardDeviation[3])`. Notice that in this case, the true standard deviation of 0.05 lies within the estimated interval of (`r sprintf("%.4f", sd(oscarL)-bootstrap_df$StandardDeviation[3])`, `r sprintf("%.4f", sd(oscarL)+bootstrap_df$StandardDeviation[3])`). 
+
+A better approach would be to use a confidence interval rather than the standard deviation of the bootstrap estimates. There are many advantages to this approach, and in particular it allows you to specify a confidence level for your bootstrap estimate.
+
+Here is one way you can get at the 95\% confidence interval:
+
+```{r}
+bootstrap_sd_CI = lapply(bootstrap_sd, quantile, probs = c(0.025,0.975))
+  
+bootstrap_df_2 = data.frame(
+  BootstrapSamples = format(resamples, scientific = F), 
+  CI_lower = unlist(bootstrap_sd_CI)[c(T,F)], 
+  CI_upper = unlist(bootstrap_sd_CI)[c(F,T)])
+```
+
+{{% alert note %}}
+**How to set different confidence levels?** 
+
+You choose different confidence intervals using the argument probs. For example, a 90% confidence interval would have probs = c(0.05,0.95). For a confidence level (1-A) x 100\%, you would set probs = c(A/2, 1-A/2).
+{{% /alert %}}
+
+```{r}
+bootstrap_df_2
+```
+
+This approach gives us an estimated standard deviation of `r sprintf("%.4f", sd(oscarL))`, with a 95\% confidence interval of (`r sprintf("%.4f", bootstrap_df_2$CI_lower[3])`,`r sprintf("%.4f", bootstrap_df_2$CI_upper[3])`).
+
+It can also be useful to look at the distribution of the bootstrap statistic, as this can illustrate potential problems (such as skewness, holes in the support, etc). This is also not difficult to do:
+
+```{r fig.width=8, fig.height=4, fig.cap="Density plot for 10,000 bootstrap sample statistics with 95% confidence interval."}
+library(ggplot2)
+df_density = data.frame(bootstrapSD = bootstrap_sd[[3]])
+df_CI = data.frame(CI = c(round(bootstrap_df_2$CI_lower[3],4),
+                          round(bootstrap_df_2$CI_upper[3],4)))
+ggplot() + 
+  geom_density(data = df_density, 
+               aes(x = bootstrapSD)) +
+  geom_vline(data = df_CI,
+             aes(xintercept = CI), color = "dodger blue") +
+  geom_text(data=df_CI, aes(y = 40, x=CI, label=CI)) +
+  theme_classic() + 
+  xlab("Bootstrap Estimated Standard Deviation") +
+  ylab("Density") +
+  ggtitle("Bootstrap Sampling Distribution", 
+          subtitle = "10,000 bootstrap samples, 95% CI in blue")
+```
+
+You can see from the figure that the estimated sampling distribution for the estimated standard deviation has several peaks. This is because we only started with 15 data points. In general, the bootstrap performs better when the initial sample size is larger. However, as you have seen in this example, it can perform quite well even for such a small sample size.
+
+## Conclusions
+
+There is a great deal more that can be done with the statistical bootstrap technique, including multivariate bootstrapping, robust bootstrapping, parametric bootstrapping, smoothed bootstrapping, windowed bootstrapping, etc. I hope that this brief introduction will help you with applying the bootstrap to your own data. 
+
+
+
+
+
+
