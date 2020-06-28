@@ -29,7 +29,7 @@ tags:
 
 title: N-Mixture Models with Auxiliary Populations and for Large Population Abundances
 
-summary: Parker, M. R. P. (2020). N-mixture models with auxiliary populations and for large population abundances [Thesis]. https://dspace.library.uvic.ca//handle/1828/11702
+summary: Parker, M. R. P. (2020). N-mixture models with auxiliary populations and for large population abundances [Thesis].
 
 url_code: 
 url_dataset: 
@@ -40,6 +40,8 @@ url_slides:
 url_source: "http://hdl.handle.net/1828/11702"
 url_video: 
 ---
+
+Parker, M. R. P. (2020). N-mixture models with auxiliary populations and for large population abundances [Thesis]. https://dspace.library.uvic.ca//handle/1828/11702
 
 {{% alert note %}}
 Click the *Cite* button above for the latex .bib citation information.

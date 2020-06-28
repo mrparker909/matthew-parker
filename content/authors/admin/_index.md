@@ -4,9 +4,12 @@ authors:
 bio: 
 education:
   courses:
+  - course: PhD in Statistics
+    institution: Simon Fraser University
+    year: in progress
   - course: MSc in Statistics
     institution: University of Victoria
-    year: in progress
+    year: 2020
   - course: BSc in Physics and Mathematics
     institution: University of Victoria
     year: 2015

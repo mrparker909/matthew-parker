@@ -21,7 +21,7 @@ tags:
 - survey methodology
 title: Estimating population abundance using auxiliary population counts
 
-summary: Estimating population abundance using auxiliary population counts. Proceedings of the Survey Methods Section, 1–7. https://ssc.ca/en/2019-annual-meeting-calgary
+summary: Estimating population abundance using auxiliary population counts. Proceedings of the Survey Methods Section, 1–7.
 
 url_code: 
 url_dataset: 
@@ -32,6 +32,8 @@ url_slides:
 url_source: "https://ssc.ca/en/2019-annual-meeting-calgary"
 url_video: 
 ---
+
+Estimating population abundance using auxiliary population counts. Proceedings of the Survey Methods Section, 1–7. https://ssc.ca/en/2019-annual-meeting-calgary
 
 {{% alert note %}}
 Click the *Cite* button above for the latex .bib citation information.
