@@ -27,7 +27,9 @@ disable_codefolding: false
 <p>Bootstrapping is a statistical technique for analyzing the distributional properties of sample data (such as variability and bias). It has many uses, and is generally quite easy to implement. Continue reading to learn how you can perform a bootstrap procedure in R!</p>
 <div id="what-is-bootstrapping" class="section level2">
 <h2>What is bootstrapping?</h2>
-<p>The bootstrap essentially uses re-sampling of a set of sample data in order to observe properties of the distribution of the data. For each re-sampling of the data (each “bootstrap sample”), you sample with replacement from the sample data, and compute the statistic of interest on the bootstrap sample (the bootstrap statistic). This provides you with a set of bootstrap statistics from which you can analyze the estimated sampling distribution of the statistic.</p>
+<p>The bootstrap essentially uses re-sampling of a set of sample data in order to observe properties of the distribution of the data. For each re-sampling of the data (each “bootstrap sample”), you sample <strong>with replacement</strong> from the sample data, and compute the statistic of interest on the bootstrap sample (the bootstrap statistic). This provides you with a set of bootstrap statistics from which you can analyze the estimated sampling distribution of the statistic.</p>
+<p>{{% alert note %}} <strong>Why is it important to sample with replacement?</strong></p>
+<p>Sampling with replacement ensures that you can resample the same observation multiple times. At first this may seem counter intuitive, however this is where the extra information on variability is coming from! This is also why your bootstrap samples will always have the same number of elements as your original sample data. {{% /alert %}}</p>
 </div>
 <div id="bootstrap-example" class="section level2">
 <h2>Bootstrap Example</h2>
