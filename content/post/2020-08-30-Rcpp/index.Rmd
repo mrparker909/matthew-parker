@@ -1,0 +1,226 @@
+---
+title: 'Rcpp: Using C++ to improve performance in R'
+author: Matthew Parker
+date: '2020-08-20'
+categories:
+  - R
+  - Rcpp
+  - Tutorial
+tags:
+  - R
+  - Rcpp
+  - C++
+  - tutorial
+  - efficiency
+  - optimization
+image:
+  placement: 1
+  focal_point: "Left"
+  preview_only: false
+
+disable_codefolding: false
+---
+
+```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
+
+```
+
+Rcpp is an R library allowing for easy integration of C++ code in your R workflow. It allows you to create optimized functions for when R just isn't fast enough. It can also be used as a bridge between R and C++ giving you the ability to access the existing C++ libraries.
+
+## Why use Rcpp?
+
+There are many use cases for Rcpp, and of course many of them assume that you are interested in primarily working in R. Some possibilities include using Rcpp to:
+
+- call optimized C++ functions from within R
+- write your own C++ functions to eliminate slow code
+- interface R with external C++ libraries not otherwise available in R
+
+We are going to look at a concrete example of optimizing a function using Rcpp, and calling that funciton within R. We will need the library [**Rcpp**](https://CRAN.R-project.org/package=Rcpp), and we will be comparing execution times using the library [**microbenchmark**](https://CRAN.R-project.org/package=microbenchmark). Both of these libraries can be installed easily:
+
+```{r eval=F}
+install.packages("Rcpp")
+install.packages("microbenchmark")
+```
+
+And then loaded in R:
+
+```{r libraries}
+library(Rcpp)
+library(microbenchmark)
+```
+
+## Example
+
+This example is adapted from the application of filling a transition probability matrix (such as is typical when working with hidden Markov models).
+
+Consider that we need to fill a matrix with calculated values. This is an issue that comes up all the time, and has many solutions. A few potential solutions for this problem include using the function _outer()_, looping over matrix elements with for loops, calculating row-wise or column-wise using the _apply()_ function, etc. The various solutions each have their own computational efficiencies, with some being significantly faster than others. For demonstration we will use nested for loops in the R implementation.
+
+{{% alert note %}}
+**For loops in R?** 
+
+Typically, it is recommended to avoid using for loops in R when speed or efficiency are required. For loops are often slower than other (vectorized) solutions. However they are also the easiest method to learn for new programmers coming to R from other languages such as C++, where for loops can be very efficient.
+{{% /alert %}}
+
+### R Implementation
+
+The function we will be optimizing takes exactly one parameter, the size of the square matrix we will be filling with values. 
+
+```{r}
+func_forloop <- function(n) {
+  M = matrix(0, nrow=n, ncol=n)
+  for(row in 1:n) {
+    for(col in 1:n) {
+      for(m in 0:min(row,col)) {
+        M[row,col] = M[row,col] + 
+          dpois(x = col-1-m, lambda = 1) *
+          dbinom(x = m, size = row-1, prob = 0.75)
+      }
+    }
+  }
+  return(M)
+}
+```
+
+We can calculate this matrix for any value of n, let's try 3:
+
+```{r}
+func_forloop(3)
+```
+
+So, how fast is this function?
+
+```{r cache=T}
+bm = microbenchmark(func_forloop(10),
+                    func_forloop(30),
+                    func_forloop(50),
+                    unit = "s")
+print(bm, unit = "ms")
+```
+
+As you can see, the function does not scale well as n increases (both dimensions of the matrix increase, and the upper bound of summation for m increase as n increases). Thus computing time can quickly grow out of hand for large n. Let's see how we can implement this in C++ using Rcpp.
+
+### Rcpp Implementation
+
+In a separate file (I will name the file _my\_func.cpp_), we will have this implementation:
+
+```{Rcpp eval=F}
+#include <Rcpp.h>
+using namespace Rcpp;
+using namespace std;
+
+// [[Rcpp::export]]
+NumericMatrix func_Rcpp(int x) {
+  // NumericMatrix() is the Rcpp analogue to R's matrix()
+  NumericMatrix M = NumericMatrix(x); 
+  
+  // In C++ indexing starts at zero, not one
+  for(int row = 0; row < x; row++) {
+    for(int col = 0; col < x; col++) {
+      for(int m = 0; m <= min(row,col); m++) {
+        // C++ allows: "a += b" as shorthand for "a = a + b"
+        M(row,col) += R::dpois(col-m, 1, false) *
+          R::dbinom(m, row, 0.75, false);
+      }
+    }  
+  }
+  
+  return M;
+}
+```
+
+
+We can then use the function in R after sourcing it with Rcpp:
+
+```{R Rcpp-source, message=F}
+Rcpp::sourceCpp("my_func.cpp")
+```
+
+We can see that the function returns the same matrix as the R implementation:
+
+```{r}
+func_Rcpp(3)
+```
+
+And we can compare the computation times with the R implementation:
+
+
+```{r cache=T}
+bm = microbenchmark(func_forloop(50),
+                    func_Rcpp(50),
+                    unit = "s")
+print(bm, unit = "ms")
+```
+
+The timings show that there is no contest, the for loop implementation in C++ is significantly faster. However, I would be remiss if I left you with the impression that this is the only way to speed up the code. This is meant as an example of implementing code using Rcpp, and calling that code from within R. Next I will show you a faster way of calculating this particular problem.
+
+### Convolution
+
+The biggest bottleneck in this calculation is the summation over m. However, we are summing over the product of two functions, with one function input increasing and the other decreasing. In our case, this means we have a [discrete convolution](https://en.wikipedia.org/wiki/Convolution#Discrete_convolution). It is well known that due to the existance of the [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform), convolution can be calculated extremely quickly. Base R implements this fast convolution with the function _convolve()_
+
+Using this fast convolution, the function looks like this:
+
+```{r}
+func_convolution <- function(n) {
+  M = matrix(0, nrow=n, ncol=n)
+  for(row in 1:n) {
+      M[row,] = convolve(dbinom(x = 0:n, size = row-1, prob = 0.75),
+                         dpois(x = n:0, lambda = 1), 
+                         type = "open")[1:n]
+  }
+  return(M)
+}
+```
+
+```{r}
+func_convolution(3)
+```
+
+```{r cache=T}
+bm = microbenchmark(func_forloop(50),
+                    func_Rcpp(50),
+                    func_convolution(50),
+                    unit = "s")
+print(bm, unit = "ms")
+```
+
+So, the convolution method performs even better than the Rcpp implementation. What is the drawback? Well, the convolution method is extremely fast, but only very narrowly applicable. 
+
+### Vectorized
+
+We can also vectorize to remove the need for the for loop entirely:
+
+
+```{r}
+func_vectorized <- function(n) {
+  M = matrix(0, nrow=n, ncol=n)
+  
+  M = t(sapply(X = 1:n, FUN = function(X) {
+    convolve(dbinom(x = 0:n, size = X-1, prob = 0.75),
+                         dpois(x = n:0, lambda = 1), 
+                         type = "open")[1:n]
+  }))
+
+  return(M)
+}
+func_vectorized(3)
+```
+
+
+```{r cache=T}
+bm = microbenchmark(func_convolution(300),
+                    func_vectorized(300),
+                    unit = "s")
+print(bm, unit = "ms")
+```
+
+However, you can see that in this case, the for loop is essentially the same speed as the vectorized solution.
+
+## Conclusions
+
+Rcpp can be applied to many more types of problems to optimize your R code, but you should always be aware that small computational tricks such as convolution can vastly improve the performance of your code. Knowing how to take advantage of C++ to speed up portions of your code can save tremendous amounts of time for complicated or long-running programs. The goal should be to program in R, use code profiling to find bottlenecks, and optimize those bottlenecks (either using Rcpp, or refactoring the code, or using mathematical tricks).
+
+
+
+
+
+
