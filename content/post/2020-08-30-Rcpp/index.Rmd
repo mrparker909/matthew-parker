@@ -35,7 +35,7 @@ There are many use cases for Rcpp, and of course many of them assume that you ar
 - write your own C++ functions to eliminate slow code
 - interface R with external C++ libraries not otherwise available in R
 
-We are going to look at a concrete example of optimizing a function using Rcpp, and calling that funciton within R. We will need the library [**Rcpp**](https://CRAN.R-project.org/package=Rcpp), and we will be comparing execution times using the library [**microbenchmark**](https://CRAN.R-project.org/package=microbenchmark). Both of these libraries can be installed easily:
+We are going to look at a concrete example of optimizing a function using Rcpp, and calling that function within R. We will need the library [**Rcpp**](https://CRAN.R-project.org/package=Rcpp), and we will be comparing execution times using the library [**microbenchmark**](https://CRAN.R-project.org/package=microbenchmark). Both of these libraries can be installed easily:
 
 ```{r eval=F}
 install.packages("Rcpp")
@@ -139,6 +139,7 @@ We can see that the function returns the same matrix as the R implementation:
 
 ```{r}
 func_Rcpp(3)
+all.equal(func_forloop(3), func_Rcpp(3))
 ```
 
 And we can compare the computation times with the R implementation:
@@ -155,7 +156,7 @@ The timings show that there is no contest, the for loop implementation in C++ is
 
 ### Convolution
 
-The biggest bottleneck in this calculation is the summation over m. However, we are summing over the product of two functions, with one function input increasing and the other decreasing. In our case, this means we have a [discrete convolution](https://en.wikipedia.org/wiki/Convolution#Discrete_convolution). It is well known that due to the existance of the [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform), convolution can be calculated extremely quickly. Base R implements this fast convolution with the function _convolve()_
+The biggest bottleneck in this calculation is the summation over m. However, we are summing over the product of two functions, with one function input increasing and the other decreasing. In our case, this means we have a [discrete convolution](https://en.wikipedia.org/wiki/Convolution#Discrete_convolution). It is well known that due to the existance of the [Fast Fourier Transform](https://en.wikipedia.org/wiki/Fast_Fourier_transform), convolution can be calculated extremely quickly. Base R implements this fast convolution with the function _convolve()_.
 
 Using this fast convolution, the function looks like this:
 
@@ -173,6 +174,7 @@ func_convolution <- function(n) {
 
 ```{r}
 func_convolution(3)
+all.equal(func_forloop(3), func_Rcpp(3), func_convolution(3))
 ```
 
 ```{r cache=T}
