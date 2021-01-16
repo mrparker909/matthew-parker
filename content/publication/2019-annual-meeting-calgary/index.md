@@ -1,8 +1,8 @@
 ---
 abstract: We develop a new method for estimating population abundance for notoriously difficult to count populations. This is made possible using an easy to count auxiliary population with a known link to the target population. The new models require population specific domain knowledge, and can be easily applied using existing software to estimate population abundances where offspring are more readily counted than the adults. Applications could include parent/offspring, predator/prey, and symbiotic relations in which one population is more feasible to study than the other.
 authors:
-- Matthew RP Parker
-- Laura LE Cowen
+- Matthew R. P. Parker
+- Laura L. E. Cowen
 date: "2019-05-01T00:00:00Z"
 doi: ""
 featured: true

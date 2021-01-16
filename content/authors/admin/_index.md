@@ -10,6 +10,9 @@ education:
   - course: MSc in Statistics
     institution: University of Victoria
     year: 2020
+  - course: VADA Graduate Training Program
+    institution: University of Manitoba
+    year: 2019
   - course: BSc in Physics and Mathematics
     institution: University of Victoria
     year: 2015
@@ -18,6 +21,7 @@ interests:
 - Statistical Modelling
 - R, Tidyverse, Data Science
 - Machine Learning
+- Python, Tensorflow, Keras
 - Math, Physics, Astronomy
 name: Matthew Parker
 organizations:
@@ -43,4 +47,4 @@ user_groups:
 
 # About Me
 
-Matthew Parker is a PhD student at Simon Fraser University, and a MSc graduate from the University of Victoria. He is also a founding member of [DSS Blogs](https://dss-ialh.rbind.io/). His research interests include abundance modelling using INAR and N-Mixture methodologies, machine learning techniques, manifold regression, and statistical applications to health care. He graduated from the Visual and Automated Disease Analytics graduate training program in 2019.
+Matthew Parker is a PhD student at Simon Fraser University, and a MSc graduate from the University of Victoria. He is also a founding member of [DSS Blogs](https://dss-ialh.rbind.io/). His research interests include abundance modelling using INAR and N-Mixture methodologies, machine learning techniques, manifold regression, and statistical applications to health care.

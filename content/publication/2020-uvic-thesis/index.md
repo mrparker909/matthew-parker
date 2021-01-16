@@ -1,7 +1,7 @@
 ---
 abstract: "The key results of this thesis are (1) an extension of N-mixture models to incorporate the additional layer of obfuscation brought by observing counts from a related auxiliary population (rather than the target population), (2) an extension of N-mixture models to allow for grouped counts, the purpose being two-fold: to extend the applicability of N-mixtures to larger population sizes, and to allow for the use of coarse counts in fitting N-mixture models, (3) a new R package allowing the easy application of the new N-mixture models, (4) a new R package allowing for optimization of multi-parameter functions using arbitrary precision arithmetic, which was a necessary tool for optimization of the likelihood in large population abundance N-mixture models, as well as (5) simulation studies validating the new grouped count models and comparing them to the classic N-mixtures models."
 authors:
-- Matthew RP Parker
+- Matthew R. P. Parker
 date: "2020-04-30T00:00:00Z"
 doi: 
 featured: true
