@@ -5,7 +5,7 @@ authors:
 - Vivian Pattison
 - Laura L. E. Cowen
 date: "2020-07-14T00:00:00Z"
-doi: https://doi.org/10.1007/s10651-020-00455-3
+doi: "10.1007/s10651-020-00455-3"
 featured: true
 image:
   caption: 
@@ -34,7 +34,7 @@ tags:
 
 title: Estimating population abundance using counts from an auxiliary population
 
-summary: Parker, M.R.P., Pattison, V. & Cowen, L.L.E. Estimating population abundance using counts from an auxiliary population. Environ Ecol Stat 27, 509–526 (2020).
+summary: Parker, M.R.P., Pattison, V. & Cowen, L.L.E. (2020). Estimating population abundance using counts from an auxiliary population. Environmental Ecological Statistics 27, 509–526.
 
 url_code: 
 url_dataset: 
