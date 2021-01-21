@@ -1,0 +1,344 @@
+---
+title: "Neural Networks for Clustering in Python"
+author: "Matthew Parker"
+date: '2021-01-16'
+categories:
+- Python
+- Statistics
+- Tutorial
+- TensorFlow
+tags:
+- python
+- machine learning
+- keras
+- tensorflow
+- tutorial
+- clustering
+- kmeans
+- autoencoder
+- unsupervised learning
+- natural language processing
+image:
+  placement: 1
+  focal_point: Left
+  preview_only: no
+disable_codefolding: no
+---
+
+<script src="index_files/header-attrs/header-attrs.js"></script>
+
+
+<p>Neural Networks are an immensely useful class of machine learning model, with countless applications. Today we are going to analyze a data set and see if we can gain new insights by applying unsupervised clustering techniques to find patterns and hidden groupings within the data.</p>
+<p>Our goal is to produce a dimension reduction on complicated data, so that we can create unsupervised, interpretable clusters like this:</p>
+<div class="figure"><span id="fig:unnamed-chunk-1"></span>
+<img src="img/kmeans_fig.gif" alt="Amazon cell phone data encoded in a 3 dimensional space, with K-means clustering defining eight clusters."  />
+<p class="caption">
+Figure 1: Amazon cell phone data encoded in a 3 dimensional space, with K-means clustering defining eight clusters.
+</p>
+</div>
+<div id="the-data" class="section level2">
+<h2>The Data</h2>
+<p>We will be looking at cell phones and customer reviews taken from Amazon during 2019. This data set is comprised of two files. The first file <em>items.csv</em> contains data on the individual products. It has columns containing: <strong>Product ASIN, Product Brand, Product Title, Product URL, Product Image URL, Product Average Rating, Product Review Page URL, Product Total Reviews, Product Price, and Product Original Price</strong>. The second file <em>reviews.csv</em> contains data on the individual reviews, which can be linked to the <em>items.csv</em> using the Product ASIN columns. The <em>reviews.csv</em> file has columns containing: <strong>Product ASIN, Reviewer Name, Reviewer Rating (scale 1 to 5), Review Date, Valid Customer, Review Title, Review Content, and Helpful Feedbacks</strong>. For brevity, we will focus only on the <em>items.csv</em> file, but you can imagine performing a very similar workflow on <em>reviews.csv</em>, which could then be used to analyze clusters of items against clusters of reviewers.</p>
+<p>Thank you to <a href="https://github.com/grikomsn">Griko Nibras</a>, for curating this data and making it available on Kaggle!</p>
+<p>{{% alert note %}}
+<strong>Where can you find the data yourself?</strong></p>
+<p>The data is available <a href="https://www.kaggle.com/grikomsn/amazon-cell-phones-reviews">HERE</a> on Kaggle.
+{{% /alert %}}</p>
+</div>
+<div id="the-software" class="section level2">
+<h2>The Software</h2>
+<p>Today we will be using Python 3.7.9, together with the machine learning package <em>TensorFlow</em>. We will use the <em>Keras</em> API, which makes building Neural Networks exceptionally straightforward.</p>
+<p>{{% alert note %}}
+Problems with <strong>plot_model</strong></p>
+<p>Later we will use the function <em>plot_model</em> to visualize the neural networks. It can be problematic to get this function working on Windows 10 (at least at the time of writing this). You can skip running this function if you want, it saves an image of the neural network graph to disk, which can be useful for visualization but is otherwise unnecessary. If you encounter issues, here are the steps I took to get it working:</p>
+<ul>
+<li>use Python 3.7</li>
+<li>install <a href="http://www.graphviz.org/">Graphviz</a></li>
+<li>add graphviz to your system path, for me: <strong>C:/Program Files (x86)/Graphviz 2.44.1/bin</strong></li>
+<li>install python packages <em>pydot</em> and <em>graphviz</em></li>
+<li>add graphviz to the path in python:</li>
+</ul>
+<pre><code>import os
+os.environ[&quot;PATH&quot;] += os.pathsep + &#39;C:/Program Files (x86)/Graphviz 2.44.1/bin&#39; </code></pre>
+<ul>
+<li>restart your python IDE</li>
+</ul>
+<p>After this <em>plot_model</em> worked for me, but if you can’t get it working on Windows, I would suggest using Linux instead.
+{{% /alert %}}</p>
+</div>
+<div id="the-analysis" class="section level2">
+<h2>The Analysis</h2>
+<div id="step-1-load-the-libraries-in-python" class="section level3">
+<h3>Step 1: Load the libraries in Python</h3>
+<p>Load the following libraries (and install any that you are missing).</p>
+<pre class="python"><code>import numpy as np  # numpy for math
+import pandas       # for dataframes and csv files
+import matplotlib.pyplot as plt  # for plotting
+from matplotlib import animation  # animate 3D plots
+from mpl_toolkits.mplot3d import Axes3D  # 3D plots
+
+# Scikit learn
+from sklearn.model_selection import train_test_split
+from sklearn.cluster import KMeans
+from sklearn import manifold
+
+# TensorFlow and Keras
+import tensorflow as tf
+from tensorflow.keras.layers.experimental import preprocessing
+from tensorflow import keras</code></pre>
+</div>
+<div id="step-2-load-the-data-in-python" class="section level3">
+<h3>Step 2: Load the Data in Python</h3>
+<p>Note that I have the data saved into the relative directory “./data/”, you will need to modify the paths depending on where you have stored your data.</p>
+<pre class="python"><code>items_csv = pandas.read_csv(&quot;./data/items.csv&quot;)
+items_csv.head(3) # look at top 3 items
+items_csv.shape   # what is the size of the data?</code></pre>
+<pre><code>&gt;&gt;&gt; items_csv.head(3)
+         asin     brand  ...  price originalPrice
+0  B0000SX2UC       NaN  ...   0.00           0.0
+1  B0009N5L7K  Motorola  ...  49.95           0.0
+2  B000SKTZ0S  Motorola  ...  99.99           0.0
+[3 rows x 10 columns]
+
+items_csv.shape
+(720, 10)</code></pre>
+<p>So you see that we have 720 rows of data, each containing 10 columns of information (as expected). We will do one more step before moving on: we will remove all rows with missing data. This is a controversial choice, since we could instead use imputation to fill missing values, or treat missing values informatively in the model. For simplicity, we will just drop all rows with missing data from the data set:</p>
+<pre class="python"><code>items_features = items_csv.copy().dropna()</code></pre>
+</div>
+<div id="step-3-preprocess-the-data" class="section level3">
+<h3>Step 3: Preprocess the Data</h3>
+<p>Our raw data needs to be transformed to work well with Keras, so we will need our data to be preprocessed. Some of our columns are numerical, and can be normalized, and some of them are strings (which will need special treatment). We will create a preprocessing layer for the model similar to <a href="https://www.tensorflow.org/tutorials/load_data/csv#mixed_data_types">this tutorial</a>, which will allow us to use each feature column appropriately.</p>
+<p>First, we remove the columns which are not likely to be useful: <strong>url, image, reviewUrl</strong>, and <strong>asin</strong>:</p>
+<pre class="python"><code># Let&#39;s remove these columns as not interesting for us
+items_features.pop(&quot;url&quot;)
+items_features.pop(&quot;image&quot;)
+items_features.pop(&quot;reviewUrl&quot;)
+p_labels = items_features.pop(&quot;asin&quot;)</code></pre>
+<p>Now we will begin creating the preprocessing layer. We create a dictionary for our input features, with matching data types:</p>
+<pre class="python"><code>inputs = {}
+for name, column in items_features.items():
+    dtype = column.dtype
+    if dtype == object:
+        dtype = tf.string
+    else:
+        dtype = tf.float32
+    inputs[name] = tf.keras.Input(shape=(1,), name=name, dtype=dtype)
+
+inputs</code></pre>
+<pre><code>&gt;&gt;&gt; inputs
+{&#39;brand&#39;: &lt;tf.Tensor &#39;brand_3:0&#39; shape=(None, 1) dtype=string&gt;, 
+ &#39;title&#39;: &lt;tf.Tensor &#39;title_3:0&#39; shape=(None, 1) dtype=string&gt;, 
+ &#39;rating&#39;: &lt;tf.Tensor &#39;rating_3:0&#39; shape=(None, 1) dtype=float32&gt;, 
+ &#39;totalReviews&#39;: &lt;tf.Tensor &#39;totalReviews_3:0&#39; shape=(None, 1) dtype=float32&gt;, 
+ &#39;price&#39;: &lt;tf.Tensor &#39;price_3:0&#39; shape=(None, 1) dtype=float32&gt;, 
+ &#39;originalPrice&#39;: &lt;tf.Tensor &#39;originalPrice_3:0&#39; shape=(None, 1) dtype=float32&gt;}</code></pre>
+<p>You can see that <em>inputs</em> holds information about what the data looks like. We use this to tell Keras how to connect neural network layers together.</p>
+<p>Next we separate out the four numerical columns, concatenate them into a single feature vector, and normalize:</p>
+<pre class="python"><code># deal with numeric features
+numeric_inputs = {name: input for name, input in inputs.items() if input.dtype == tf.float32}
+
+x = tf.keras.layers.Concatenate()(list(numeric_inputs.values()))
+norm = preprocessing.Normalization()
+norm.adapt(np.array(items_features[numeric_inputs.keys()]))
+all_numeric_inputs = norm(x)
+preprocessed_inputs = [all_numeric_inputs]
+
+all_numeric_inputs</code></pre>
+<pre><code>&gt;&gt;&gt; all_numeric_inputs
+&lt;tf.Tensor &#39;normalization/Identity:0&#39; shape=(None, 4) dtype=float32&gt;</code></pre>
+<p>Similarly, we process the string features (we create a vocabulary for each column, and encode them as <a href="https://en.wikipedia.org/wiki/One-hot">one-hot</a>):</p>
+<pre class="python"><code># deal with string features
+for name, input in inputs.items():
+    if input.dtype != tf.string:
+        continue
+
+    lookup = preprocessing.StringLookup(vocabulary=np.unique(items_features[name]))
+    one_hot = preprocessing.CategoryEncoding(max_tokens=lookup.vocab_size())
+
+    x = lookup(input)
+    x = one_hot(x)
+    preprocessed_inputs.append(x) # append preprocessed feature to features list
+    
+preprocessed_inputs</code></pre>
+<pre><code>&gt;&gt;&gt; preprocessed_inputs
+[&lt;tf.Tensor &#39;normalization/truediv:0&#39; shape=(None, 4) dtype=float32&gt;, 
+ &lt;tf.Tensor &#39;category_encoding_1/bincount/DenseBincount:0&#39; shape=(None, 12) dtype=float32&gt;, 
+ &lt;tf.Tensor &#39;category_encoding_2/bincount/DenseBincount:0&#39; shape=(None, 716) dtype=float32&gt;]</code></pre>
+<p>Finally, we concatenate the preprocessed inputs into a single vector, and create the processing model which we can later apply to our data as the first step in our neural network:</p>
+<pre class="python"><code>preprocessed_inputs_cat = keras.layers.Concatenate()(preprocessed_inputs)
+preprocessing_layer = tf.keras.Model(inputs, preprocessed_inputs_cat, name=&quot;ProcessData&quot;)
+
+# this saves an image of the model, see note regarding plot_model issues
+tf.keras.utils.plot_model(model=preprocessing_layer, rankdir=&quot;LR&quot;, dpi=130, show_shapes=True, to_file=&quot;processing.png&quot;)</code></pre>
+<p>Here you can see the results of our processing model, starting with inputs for each of the columns of interest, and ending in a single feature vector:</p>
+<div class="figure"><span id="fig:unnamed-chunk-10"></span>
+<img src="img/processing.png" alt="Graph visualization of data preprocessing layers."  />
+<p class="caption">
+Figure 2: Graph visualization of data preprocessing layers.
+</p>
+</div>
+<p>Let’s apply the layer to two rows of data, to see the preprocessing layer in action:</p>
+<pre class="python"><code>items_features_dict = {name: np.array(value) for name, value in items_features.items()}
+
+# grab two samples
+two_sample_dict = {name:values[1:3, ] for name, values in items_features_dict.items()}
+two_sample_dict</code></pre>
+<pre><code>&gt;&gt;&gt; two_sample_dict
+{&#39;brand&#39;: array([&#39;Motorola&#39;, &#39;Motorola&#39;], dtype=object), 
+ &#39;title&#39;: array([&#39;MOTOROLA C168i AT&amp;T CINGULAR PREPAID GOPHONE CELL PHONE&#39;, &#39;Motorola i335 Cell Phone Boost Mobile&#39;], dtype=object), 
+ &#39;rating&#39;: array([2.7, 3.3]), 
+ &#39;totalReviews&#39;: array([22, 21], dtype=int64), 
+ &#39;price&#39;: array([99.99,  0.  ]), 
+ &#39;originalPrice&#39;: array([0., 0.])}</code></pre>
+<pre class="python"><code># apply the preprocessing layer
+two_sample_fitted = preprocessing_layer(two_sample_dict)
+
+two_sample_fitted</code></pre>
+<pre><code>&gt;&gt;&gt; two_sample_fitted
+&lt;tf.Tensor: shape=(2, 732), dtype=float32, numpy=
+array([[-1.4144895 , -0.50023943, -0.67571497, ...,  0.        ,
+         0.        ,  0.        ],
+       [-0.57760113, -0.50619656, -1.1760992 , ...,  0.        ,
+         0.        ,  0.        ]], dtype=float32)&gt;</code></pre>
+<p>Great! We can now process our input data into useful Tensors. Now we can move on to trying to find natural clusters in the data.</p>
+</div>
+<div id="step-4-autoencoders-for-dimension-reduction" class="section level3">
+<h3>Step 4: Autoencoders for Dimension Reduction</h3>
+<p>Our model now has a preprocessing layer, which prepares the raw data for use. However, a single row of data (after processing) is represented by a whopping 732 features. We need to reduce the dimensionality of the data into something a little less unwieldy. To accomplish this task, we will use a simple <a href="https://en.wikipedia.org/wiki/Autoencoder">autoencoder</a>. You can read more on how to implement various types of autoencoders at the <a href="https://blog.keras.io/building-autoencoders-in-keras.html">keras blog</a>.</p>
+<p>Here is the autoencoder portion of the model:</p>
+<pre class="python"><code># This is the size of our input data
+full_dim = two_sample_fitted.shape.as_list()[1]
+
+# these are the downsampling/upsampling dimensions
+encoding_dim1 = 128
+encoding_dim2 = 16
+encoding_dim3 = 3 # we will use these 3 dimensions for clustering
+
+# This is our encoder input
+encoder_input_data = keras.Input(shape=(full_dim,))
+
+# the encoded representation of the input
+encoded_layer1 = keras.layers.Dense(encoding_dim1, activation=&#39;relu&#39;)(encoder_input_data)
+encoded_layer2 = keras.layers.Dense(encoding_dim2, activation=&#39;relu&#39;)(encoded_layer1)
+# Note that encoded_layer3 is our 3 dimensional &quot;clustered&quot; layer, which we will later use for clustering
+encoded_layer3 = keras.layers.Dense(encoding_dim3, activation=&#39;relu&#39;, name=&quot;ClusteringLayer&quot;)(encoded_layer2)
+
+encoder_model = keras.Model(encoder_input_data, encoded_layer3)
+
+# the reconstruction of the input
+decoded_layer3 = keras.layers.Dense(encoding_dim2, activation=&#39;relu&#39;)(encoded_layer3)
+decoded_layer2 = keras.layers.Dense(encoding_dim1, activation=&#39;relu&#39;)(decoded_layer3)
+decoded_layer1 = keras.layers.Dense(full_dim, activation=&#39;sigmoid&#39;)(decoded_layer2)
+
+# This model maps an input to its autoencoder reconstruction
+autoencoder_model = keras.Model(encoder_input_data, outputs=decoded_layer1, name=&quot;Encoder&quot;)
+
+# compile the model
+autoencoder_model.compile(optimizer=&quot;RMSprop&quot;, loss=tf.keras.losses.mean_squared_error)
+tf.keras.utils.plot_model(model=autoencoder_model, rankdir=&quot;LR&quot;, dpi=130, show_shapes=True, to_file=&quot;autoencoder.png&quot;)</code></pre>
+<p>The autoencoder layer of the model looks like this:</p>
+<div class="figure"><span id="fig:unnamed-chunk-14"></span>
+<img src="img/autoencoder.png" alt="Graph visualization of autoencoder layers."  />
+<p class="caption">
+Figure 3: Graph visualization of autoencoder layers.
+</p>
+</div>
+</div>
+<div id="step-5-training-the-model" class="section level3">
+<h3>Step 5: Training the Model</h3>
+<p>Now, we need to train the model; currently our model does nothing! All of the model weights are randomized, and not particularly useful.</p>
+<pre class="python"><code># process the inputs
+p_items = preprocessing_layer(items_features_dict)
+
+# split into training and testing sets (80/20 split)
+train_data, test_data, train_labels, test_labels = train_test_split(p_items.numpy(), p_labels, train_size=0.8, random_state=5)
+
+# fit the model using the training data
+history = autoencoder_model.fit(train_data, train_data, epochs=1000, batch_size=256, shuffle=True, validation_data=(test_data, test_data))</code></pre>
+<p>Let’s have a look at the training progress:</p>
+<pre class="python"><code># Investigate training performance:
+history_fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+history_fig.suptitle(&#39;Autoencoder Training Performance&#39;)
+ax1.plot(range(0,1000), history.history[&#39;accuracy&#39;], color=&#39;blue&#39;)
+ax1.set(ylabel=&#39;Reconstruction Accuracy&#39;)
+ax2.plot(range(0,1000), np.log10(history.history[&#39;loss&#39;]), color=&#39;blue&#39;)
+ax2.plot(range(0,1000), np.log10(history.history[&#39;val_loss&#39;]), color=&#39;red&#39;, alpha=0.9)
+ax2.set(ylabel=&#39;log_10(loss)&#39;, xlabel=&#39;Training Epoch&#39;)
+history_fig</code></pre>
+<div class="figure"><span id="fig:unnamed-chunk-17"></span>
+<img src="img/training_history.png" alt="Autoencoder model training history. Training is in blue, validation is in red."  />
+<p class="caption">
+Figure 4: Autoencoder model training history. Training is in blue, validation is in red.
+</p>
+</div>
+<p>You can see that we get decent reconstruction from the autoencoder (76% training accuracy, 65% validation accuracy). This is far from perfect reconstruction, and more work could be done to improve the autoencoder (for example, feature specific encoding, larger encoding dimensions, etc). For our purposes, this is good enough.</p>
+<p>So, we now have an encoder which can produce a 3 dimensional representation of our 732 dimensional data. Here is what that looks like:</p>
+<div class="figure"><span id="fig:unnamed-chunk-18"></span>
+<img src="img/encoder_fig.gif" alt="Amazon cell phone data encoded in a 3 dimensional space. [See this blog for details on animating your 3D plots](http://blog.mahler83.net/2019/10/rotating-3d-t-sne-animated-gif-scatterplot-with-matplotlib/)."  />
+<p class="caption">
+Figure 5: Amazon cell phone data encoded in a 3 dimensional space. <a href="http://blog.mahler83.net/2019/10/rotating-3d-t-sne-animated-gif-scatterplot-with-matplotlib/">See this blog for details on animating your 3D plots</a>.
+</p>
+</div>
+<p>At this point, you might be wondering: <strong>“Why would I ever want to do this? These are arbitrary points in 3D space, how can I interpret this encoding?”</strong>. Good questions. Let’s suppose that you want to know how a products rating impacts its encoding:</p>
+<div class="figure"><span id="fig:unnamed-chunk-19"></span>
+<img src="img/rating_fig.gif" alt="How does average user rating impact the encoding?"  />
+<p class="caption">
+Figure 6: How does average user rating impact the encoding?
+</p>
+</div>
+<p>I hope you will agree that this is surprisingly easy to interpret, with ratings smeared from high to low in a predictable manner. You can make similar plots to visualize the impact of the other features on encoding.</p>
+</div>
+<div id="step-6-clustering" class="section level3">
+<h3>Step 6: Clustering</h3>
+<p>After all of this preparation, we are finally ready to try clustering the data. There are a vast number of methods for clustering. We will use <a href="https://en.wikipedia.org/wiki/K-means_clustering">K-means</a> as one of the simplest clustering methods. We aren’t just clustering the raw data, we are using the autoencoder representation of the data so as to reduce the dimensionality of the problem from 732 dimensions all the way down to 3 dimensions.</p>
+<p>First step, we need to decide how many clusters to use! We will use the elbow method, as in <a href="https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f">this K-means tutorial</a>:</p>
+<pre class="python"><code># choose number of clusters K:
+Sum_of_squared_distances = []
+K = range(1,30)
+for k in K:
+    km = KMeans(init=&#39;k-means++&#39;, n_clusters=k, n_init=10)
+    km.fit(encoded_items)
+    Sum_of_squared_distances.append(km.inertia_)
+
+plt.plot(K, Sum_of_squared_distances, &#39;bx-&#39;)
+plt.vlines(ymin=0, ymax=150000, x=8, colors=&#39;red&#39;)
+plt.text(x=8.2, y=130000, s=&quot;optimal K=8&quot;)
+plt.xlabel(&#39;Number of Clusters K&#39;)
+plt.ylabel(&#39;Sum of squared distances&#39;)
+plt.title(&#39;Elbow Method For Optimal K&#39;)
+plt.show()</code></pre>
+<div class="figure"><span id="fig:unnamed-chunk-21"></span>
+<img src="img/elbow_plot.png" alt="Elbow plot for choosing optimal K in K-means."  />
+<p class="caption">
+Figure 7: Elbow plot for choosing optimal K in K-means.
+</p>
+</div>
+<p>From the elbow plot, it looks like K between 5 and 10 would be appropriate. Let’s go with K=8 as our optimal choice.</p>
+<p>Here we fit the K-means using 8 clusters:</p>
+<pre class="python"><code>kmeans = KMeans(init=&#39;k-means++&#39;, n_clusters=8, n_init=10)
+kmeans.fit(encoded_items)
+P = kmeans.predict(encoded_items)</code></pre>
+<p>And we can visualize the clusters easily in our 3 dimensional representation:</p>
+<pre class="python"><code># visualize the clusters:
+encoded_fig = plt.figure()
+ax = Axes3D(encoded_fig)
+p = ax.scatter(encoded_items[:,0], encoded_items[:,1], encoded_items[:,2], c=P, marker=&quot;o&quot;, picker=True, cmap=&quot;rainbow&quot;)
+plt.colorbar(p, shrink=0.5)
+plt.show()
+
+angle = 3
+ani = animation.FuncAnimation(encoded_fig, rotate, frames=np.arange(0, 360, angle), interval=50)
+ani.save(&#39;kmeans_fig.gif&#39;, writer=animation.PillowWriter(fps=12))</code></pre>
+<div class="figure"><span id="fig:unnamed-chunk-24"></span>
+<img src="img/kmeans_fig.gif" alt="Amazon cell phone data encoded in a 3 dimensional space, with K-means clustering defining eight clusters."  />
+<p class="caption">
+Figure 8: Amazon cell phone data encoded in a 3 dimensional space, with K-means clustering defining eight clusters.
+</p>
+</div>
+<p>The clustering looks mostly reasonable, however there is clearly some bleeding between clusters, and the visually clear crescent shaped clusters are not crisply identified by the K-means. A more sophisticated clustering algorithm should probably be used on this. <a href="https://en.wikipedia.org/wiki/Cluster_analysis#Density-based_clustering">Density based clustering</a> would be my next bet!</p>
+</div>
+</div>
+<div id="conclusions" class="section level2">
+<h2>Conclusions</h2>
+<p>We have barely scratched the surface for what can be done with this data set, and there are a great many different techniques for performing clustering (both supervised and unsupervised). Additional work can be done analyzing the clusters themselves for interpretability (for example, cluster based histograms of brand, rating, price, etc.). I hope that this walk through has given you some insight into how you can apply these ideas to your own data!</p>
+</div>
