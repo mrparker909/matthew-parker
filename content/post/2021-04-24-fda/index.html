@@ -1,0 +1,244 @@
+---
+title: 'Functional Data Analysis: Discrete Observations to Functional Representations'
+author: "Matthew Parker"
+date: '2021-04-24'
+categories:
+- R
+- Statistics
+- Tutorial
+- Functional Data Analysis
+tags:
+- functional data
+- R
+- FDA
+- tutorial
+- functional representation
+- smooth curves
+- covid
+image:
+  placement: 1
+  focal_point: Left
+  preview_only: no
+disable_codefolding: no
+---
+
+<script src="index_files/header-attrs/header-attrs.js"></script>
+
+
+<p>Functional data can come from many different areas of study. Some of the most common examples come from finance (for example stock prices over time), or from health research (such as fMRI time series). Analyzing data of this form has been done traditionally using time series analysis techniques. However, viewing the data as functional, rather than individual observed points, can lead to more natural interpretations and analysis. Here we will be looking at a single example data set, and learning how to represent discrete data as functional data objects.</p>
+<div id="the-libraries" class="section level2">
+<h2>The Libraries</h2>
+<p>Since we will be working in R, we should install any packages that we will be using. Today we will be looking at the package <code>fda</code>:</p>
+<pre class="r"><code>install.packages(&quot;fda&quot;)
+library(&quot;fda&quot;)</code></pre>
+<p>We will use the <code>tidyverse</code> set of packages for data prep/cleaning:</p>
+<pre class="r"><code>install.packages(&quot;tidyverse&quot;)
+library(&quot;tidyverse&quot;)</code></pre>
+<p>We will use <code>patchwork</code> for multi-plots:</p>
+<pre class="r"><code>install.packages(&quot;patchwork&quot;)
+library(&quot;patchwork&quot;)</code></pre>
+<p>We will use <code>wesanderson</code> for some nice color palettes:</p>
+<pre class="r"><code>install.packages(&quot;wesanderson&quot;)
+library(&quot;wesanderson&quot;)</code></pre>
+<p>And we will also use the <code>lubridate</code> package for date-time data prep:</p>
+<pre class="r"><code>install.packages(&quot;lubridate&quot;)
+library(&quot;lubridate&quot;)</code></pre>
+<p>Finally, we will use the <code>reshape2</code> package for the ever useful <code>melt()</code> function:</p>
+<pre class="r"><code>install.packages(&quot;reshape2&quot;)
+library(&quot;reshape2&quot;)</code></pre>
+</div>
+<div id="the-data" class="section level2">
+<h2>The Data</h2>
+<p>The data we will be looking at today is the Canadian COVID-19 provincial case count data, available directly from <a href="https://resources-covid19canada.hub.arcgis.com/datasets/archivecasedatatable-1/data?selectedAttribute=Tests">resources-covid19canada.hub.arcgis.com</a>:</p>
+<pre class="r"><code>rawdat = read.csv(&quot;data/Health_Regional_Archive_(Public_View).csv&quot;)
+colnames(rawdat)</code></pre>
+<pre><code>## [1] &quot;ï..OBJECTID&quot;  &quot;HR_UID&quot;       &quot;Province&quot;     &quot;CaseCount&quot;    &quot;Deaths&quot;      
+## [6] &quot;Recovered&quot;    &quot;Tests&quot;        &quot;Last_Updated&quot; &quot;GlobalID&quot;</code></pre>
+<p>We will be looking at the columns <code>Last_Updated</code>, <code>Province</code>, <code>CaseCount</code>, and <code>Tests</code>. You can think of each <code>Province</code> as an individual ‘subject’, where we track case counts and administered tests for each recorded day.</p>
+<pre class="r"><code>dat = rawdat %&gt;% 
+  dplyr::select(SummaryDate=Last_Updated, Province, CaseCount, Tests) %&gt;%
+  group_by(Province) %&gt;%
+  mutate(Date=round_date(ymd_hms(SummaryDate), unit = &quot;day&quot;)) %&gt;%
+  dplyr::select(-SummaryDate) %&gt;% 
+  group_by(Province, Date) %&gt;%
+  summarise(CaseCounts=sum(CaseCount, na.rm = T), Tests=sum(Tests, na.rm = T))</code></pre>
+<pre><code>## `summarise()` regrouping output by &#39;Province&#39; (override with `.groups` argument)</code></pre>
+<pre class="r"><code>colnames(dat)</code></pre>
+<pre><code>## [1] &quot;Province&quot;   &quot;Date&quot;       &quot;CaseCounts&quot; &quot;Tests&quot;</code></pre>
+<p>We’d better make sure that we have the correct <code>Province</code> data:</p>
+<pre class="r"><code>unique(dat$Province)</code></pre>
+<pre><code>##  [1] &quot;AB&quot; &quot;BC&quot; &quot;MB&quot; &quot;NB&quot; &quot;NL&quot; &quot;NS&quot; &quot;NT&quot; &quot;NU&quot; &quot;ON&quot; &quot;PE&quot; &quot;QC&quot; &quot;SK&quot; &quot;YT&quot;</code></pre>
+<p>Let’s have a look at the data:</p>
+<pre class="r"><code>dat_clean = dat %&gt;% filter(Province %in% c(&quot;AB&quot;, &quot;BC&quot;, &quot;ON&quot;, &quot;MB&quot;, &quot;QC&quot;))
+
+pal &lt;- rev(wes_palette(&quot;Zissou1&quot;, n=length(unique(dat_clean$Province)), type = &quot;continuous&quot;))
+
+plot1 = ggplot(data=dat_clean) + 
+  geom_line(aes(x=Date, y=CaseCounts, color=Province), size=1, na.rm = T) + 
+  scale_color_manual(values = pal) + 
+  theme_classic(base_size = 14)
+plot2 = ggplot(data=dat_clean) + 
+  geom_line(aes(x=Date, y=Tests, color=Province), size=1, na.rm = T) + 
+  scale_color_manual(values = pal) +
+  theme_classic(base_size = 14)
+
+plot1 + plot2</code></pre>
+<p><img src="staticunnamed-chunk-10-1.png" width="1152" /></p>
+</div>
+<div id="transform-to-functional-data" class="section level2">
+<h2>Transform to Functional Data</h2>
+<p>Now we have many discrete observations sampled from continuous curves. We can create a functional data representation of these observations, so that we can work with the curves themselves rather than the discrete points. There are several steps involved in this, and we will go through each step now.</p>
+<div id="step-1-functional-basis" class="section level3">
+<h3>Step 1: Functional Basis</h3>
+<p>Basis functions are used to represent complex curves as simple linear combinations of known curves. For example, you can imagine representing the curve <span class="math inline">\(C\)</span> (shown in the figure below) as a linear combination of the curves <span class="math inline">\(y = x\)</span>, and <span class="math inline">\(y=sin(x)\)</span>:</p>
+<p><img src="staticunnamed-chunk-11-1.png" width="768" /></p>
+<p>In this example, the basis functions are <span class="math inline">\(y=x\)</span> and <span class="math inline">\(y=sin(x)\)</span>.</p>
+<p>First we will need to choose a set of basis functions to work with. There are many options, and the choice you make here will influence the properties of the fitted curves substantially. For example, if you are working with periodic data (such as hourly temperature data over many days), then a periodic basis would be appropriate. The Fourier Basis is one such set of periodic basis functions:</p>
+<pre class="r"><code># create 4 Fourier basis functions
+basis_fourier = create.fourier.basis(rangeval = c(0,1), nbasis = 4)
+
+# evaluate the basis functions at discrete points
+pts &lt;- seq(0,2,by = 0.01)
+basis_obs &lt;- eval.basis(pts, basis_fourier)
+matplot(pts, basis_obs, type = &#39;l&#39;, lwd = 2, cex = 3, 
+        xlab = &quot;Functional Periods&quot;, 
+        ylab = &quot;Fourier Basis Functions&quot;)</code></pre>
+<p><img src="staticunnamed-chunk-12-1.png" width="768" /></p>
+<p>Another common set of basis functions are the B-spline functions. This set of basis functions is non-periodic, and is particularly suited to our needs with the COVID case counts:</p>
+<pre class="r"><code># create 10 B-spline basis functions
+basis_bs = create.bspline.basis(rangeval = c(0,1), nbasis = 10, norder = 5)
+
+# evaluate the basis functions at discrete points
+pts &lt;- seq(0,1,by = 0.01)
+basis_obs &lt;- eval.basis(pts, basis_bs)
+matplot(pts, basis_obs, type = &#39;l&#39;, lwd = 2, cex = 3, 
+        xlab = &quot;Time&quot;, 
+        ylab = &quot;B-spline Basis Functions&quot;)</code></pre>
+<p><img src="staticunnamed-chunk-13-1.png" width="768" /></p>
+<p>Moving forward we will use this B-spline functional basis:</p>
+<pre class="r"><code># create 10 B-spline basis functions
+basis_bs = create.bspline.basis(c(as_date(min(dat_clean$Date)),
+                                  as_date(max(dat_clean$Date))), 
+                                nbasis = 10, norder = 5)
+
+# evaluate the basis functions at discrete points
+plot(basis_bs)</code></pre>
+<p><img src="staticunnamed-chunk-14-1.png" width="768" /></p>
+</div>
+<div id="step-2-functional-smoothing" class="section level3">
+<h3>Step 2: Functional Smoothing</h3>
+<p>Smoothing allows for noise in the data to be smoothed out. Just like choosing a functional basis was an important choice in representing our functional data, the level of smoothing is another essential choice. Without smoothing, we don’t penalize sharp changes in the shape of the curve, however with smoothing, we can enforce smoothness of the function up to a chosen number of derivatives. For simplicity, we will smooth up to the second derivative, which will allow us later to look at the rate of change of our functions (using the first derivative).</p>
+<p>{{% alert note %}}
+<strong>Data Transformation?</strong></p>
+<p>See <a href="https://craig.rbind.io/post/2020-01-25-asgr-2-1-data-transformation-part-2/">this post by Craig Hutton</a> for an excellent overview of data transformation techniques, including <code>pivot_wider()</code>, which we use here.
+{{% /alert %}}</p>
+<p>Smoothing is very easy to implement:</p>
+<pre class="r"><code># we need a matrix with columns = subjects (provinces), rows = replicates (dates)
+Mdat = dat_clean %&gt;% 
+  pivot_wider(id_cols = c(Date, Province),
+              names_from = Province, 
+              values_from = CaseCounts) %&gt;%
+  data.matrix()
+
+Mdat = Mdat[,-1]
+
+# setup smoothing parameters
+# fdobj:  the basis functions to use
+# Lfdobj: the derivative degree to smooth
+# lambda: smoothing penalty
+smoothPar = fdPar(fdobj = basis_bs, Lfdobj=2, lambda=1)
+
+# smoothed functional data
+dat_fd = smooth.basis(argvals = as_date(unique(dat_clean$Date)), y = Mdat, fdParobj = smoothPar)</code></pre>
+</div>
+<div id="step-3-functional-data-representation" class="section level3">
+<h3>Step 3: Functional Data Representation</h3>
+<p>Great! So we have the ability to represent the data in functional form using basis functions and smoothing.</p>
+<p>We can visualize the smoothed data:</p>
+<pre class="r"><code>dates  = seq(min(dat_fd$argvals), max(dat_fd$argvals), by = &#39;days&#39;)
+dates2 = seq(min(dat_fd$argvals), max(dat_fd$argvals), by = &#39;quarter&#39;)
+obs_fd = eval.fd(evalarg = dates, fdobj = dat_fd$fd)
+
+obs_fd = as.data.frame(obs_fd)
+obs_fd$Dates = dates
+obs_fd_df = melt(obs_fd, measure.vars = 1:5)
+colnames(obs_fd_df) = c(&quot;Date&quot;, &quot;Province&quot;, &quot;CaseCounts&quot;)
+
+ggplot(data=obs_fd_df) + 
+  geom_line(aes(x=Date, y=CaseCounts, colour=Province), 
+            size=1, na.rm = T) +
+  scale_color_manual(values = pal) +
+  theme_classic(base_size = 14)</code></pre>
+<p><img src="staticunnamed-chunk-16-1.png" width="768" /></p>
+</div>
+</div>
+<div id="derivative-functions" class="section level2">
+<h2>Derivative Functions</h2>
+<p>Now that we have our data represented as functional data, we can ask questions such as “how are the case counts changing with time?”. To answer this, we look at the first derivative of the data:</p>
+<pre class="r"><code># we evaluate the function, using Lfdobj to specify the first derivative
+div1_obs1_fd = eval.fd(evalarg = dates, fdobj = dat_fd$fd, Lfdobj = 1)
+
+div1_obs_fd = as.data.frame(div1_obs1_fd)
+div1_obs_fd$Dates = dates
+div1_obs_fd_df = melt(div1_obs_fd, measure.vars = 1:5)
+colnames(div1_obs_fd_df) = c(&quot;Date&quot;, &quot;Province&quot;, &quot;CaseCounts&quot;)
+
+ggplot(data=div1_obs_fd_df) + 
+  geom_line(aes(x=Date, y=CaseCounts, colour=Province),
+            size=1, na.rm = T) +
+  scale_color_manual(values = pal) +
+  ylab(&quot;Rate of Increase in Case Counts&quot;) +
+  theme_classic(base_size = 14)</code></pre>
+<p><img src="staticunnamed-chunk-17-1.png" width="672" /></p>
+<p>We can repeat this procedure to get our Tests Administered data into functional form:</p>
+<pre class="r"><code># we need a matrix with columns = subjects (provinces), rows = replicates (dates)
+Mdat2 = dat_clean %&gt;% 
+  pivot_wider(id_cols = c(Date, Province),
+              names_from = Province, 
+              values_from = Tests) %&gt;%
+  data.matrix()
+
+Mdat2 = Mdat2[,-1]
+
+# setup smoothing parameters
+smoothPar = fdPar(fdobj = basis_bs, Lfdobj=2, lambda=1)
+
+# smoothed functional data
+test1_fd = smooth.basis(argvals = as_date(unique(dat_clean$Date)), y = Mdat2, fdParobj = smoothPar)
+
+# visualize the tests data:
+test_fd = eval.fd(evalarg = dates, fdobj = test1_fd$fd)
+test_fd = as.data.frame(test_fd)
+test_fd$Dates = dates
+test_fd_df = melt(test_fd, measure.vars = 1:5)
+colnames(test_fd_df) = c(&quot;Date&quot;, &quot;Province&quot;, &quot;Tests&quot;)
+
+ggplot(data=test_fd_df) + 
+  geom_line(aes(x=Date, y=Tests, colour=Province), 
+            size = 1, na.rm = T) +
+  ylab(&quot;Tests Administered&quot;) +
+  scale_color_manual(values = pal) +
+  theme_classic(base_size = 14)</code></pre>
+<p><img src="staticunnamed-chunk-18-1.png" width="672" /></p>
+</div>
+<div id="conclusions" class="section level2">
+<h2>Conclusions</h2>
+<p>Let’s compare the functional data representations against their original discrete data counterparts:</p>
+<pre class="r"><code>plot1 = ggplot(data=dat_clean) + 
+  geom_line(aes(x=Date, y=CaseCounts, color=Province), 
+            size=1, na.rm = T) + 
+  scale_color_manual(values = pal) + 
+  theme_classic(base_size = 11) +
+  ggtitle(&quot;Discrete Case Counts&quot;)
+plot2 = ggplot(data=obs_fd_df) +
+  geom_line(aes(x=Date, y=CaseCounts, colour=Province), 
+            size=1, na.rm = T) +
+  scale_color_manual(values = pal) +
+  theme_classic(base_size = 11) +
+  ggtitle(&quot;Functional Case Counts&quot;)
+
+plot1 + plot2</code></pre>
+<p><img src="staticunnamed-chunk-19-1.png" width="960" /></p>
+<p>You can see that the general shape of the data has remained the same. However, notice in the left hand plot, that there are discontinuities such as the spike and dip for Quebec, around July 2020. These discontinuities, which are likely due to misreporting and future data corrections, as well as periods of non-reporting, are all smoothed away in the functional representation in the right hand plot.</p>
+<p>There is of course a tremendous amount more that can be done with functional data. Now that we have our data in a usable functional form, we could consider a number of further analyses. Some examples include functional regression (function on function or function on scalar perhaps), functional principal components (fPCA), interval testing (such as the <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/biom.12476">Interval Testing Procedure of Pini and Vantini 2016</a>), etc. Hopefully this is enough to get you started working on your own functional data!</p>
+</div>
