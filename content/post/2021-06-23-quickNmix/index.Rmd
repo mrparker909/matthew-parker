@@ -1,0 +1,221 @@
+---
+title: 'quickNmix: Asymptotic N-mixture Models'
+author: "Matthew Parker"
+date: '2021-06-23'
+categories:
+- R
+- Statistics
+- Population Abundance
+- Package
+tags:
+- package
+- R
+- n mixture models
+- tutorial
+- cran
+image:
+  placement: 1
+  focal_point: Left
+  preview_only: no
+disable_codefolding: no
+---
+
+```{r setup-chunk, warning=FALSE, message=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "static")
+library("quickNmix")
+library("tidyverse")
+library("tictoc")
+```
+
+Estimating population abundance for replicated counts data is a computationally intensive problem. N-mixture models are used extensively in ecology to estimate population sizes, and to ascertain under-detection rates. Here I will discuss my new R package: [quickNmix](https://CRAN.R-project.org/package=quickNmix), which implements asymptotic solutions to the N-mixture likelihood function. The asymptotic solutions admit faster computation of the likelihood function, and the addition of parallel computing to the package can further increase computing speeds. The package is part of my manuscript in preparation: "Parker, M.R.P., Elliott, L., Cowen, L.L.E., Cao, J. (2021). Asymptotic solutions for N-mixture models with count data [Manuscript in preparation]. Department of Statistics and Actuarial Sciences, Simon Fraser University.".
+
+## The Libraries
+
+The package [quickNmix](https://CRAN.R-project.org/package=quickNmix) is my first package available on CRAN, so you can install it easily:
+
+```{r eval=F}
+install.packages("quickNmix")
+library("quickNmix")
+```
+
+We will also use the tidyverse for data prep:
+
+```{r eval=F}
+library("tidyverse")
+```
+
+We will use tictoc for timing:
+
+```{r eval=F}
+library("tictoc")
+```
+
+
+
+## The Data
+
+We will use the Ancient Murrelet chick count data from [quickNmix](https://CRAN.R-project.org/package=quickNmix) (this data was collected by the [Laskeek Bay Conservation Society](https://www.laskeekbay.org/)). We will look at a single site model, with no covariates.
+
+```{r}
+dat = anmu[2,11:17]
+dat
+```
+
+
+
+Let's have a look at the data:
+
+```{r fig.width=8, fig.height=3.5}
+dat_df = data.frame(Counts=dat, Year=2000:2006, Site=as.factor(rep(c(2), each=7)))
+plot1 = ggplot(data=dat_df) + 
+  geom_line(aes(x=Year, y=Counts, colour=Site), size=1, na.rm = T, alpha=0.3) +
+  geom_point(aes(x=Year, y=Counts, colour=Site), size=1, na.rm = T) + 
+  scale_colour_manual(values = c("firebrick", "dodgerblue", "seagreen")) +
+  scale_y_continuous(limits=c(0,NA)) +
+  theme_classic(base_size = 12) +
+  ylab("Observed Chick Counts")
+
+plot1
+```
+
+
+## Fitting A Model
+
+Okay, we have our data ready. Let's run a basic model:
+
+```{r, cache=TRUE}
+doParallel::registerDoParallel(cores = 2) # optional, don't run this if you want to use a single processor
+
+# let's use the tictoc package for timing:
+tictoc::tic()
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300) # K is the upper bound on the number of chicks
+tictoc::toc()
+```
+
+## Analyzing the Results
+
+The output from fitNmix has three categories:
+
+```{r}
+names(mod_anmu)
+```
+
+If you need to look at the output from the optimization algorithm, you do so easily using optim_results:
+
+```{r}
+mod_anmu$optim_results
+```
+
+This tells you if there were convergence issues, how many function evaluations were performed, and so on. However, for more human-readable output, you can check out model_results, which includes several useful quantities:
+
+```{r}
+mod_anmu$model_results
+```
+
+Here you can see matrices of parameter estimates calculated for each site and time, you can see the value of the negative log likelihood (NLL), and you can see the Akaike Information Criterion (AIC) for the fitted model (which can be used to compare nested models when selecting/rejecting covariates).
+
+A common method of getting abundance estimates is to divide the observed counts by the estimated probability of detection:
+
+```{r}
+Nhat = dat/mod_anmu$model_results$estimate_matrices$pdet
+```
+
+```{r fig.width=8, fig.height=3.5}
+dat_df = data.frame(Counts=c(Nhat[1,]), Year=2000:2006, Site=as.factor(rep(c(2), each=7)))
+plot1 = ggplot(data=dat_df) + 
+  geom_line(aes(x=Year, y=Counts, colour=Site), size=1, na.rm = T, alpha=0.3) +
+  geom_point(aes(x=Year, y=Counts, colour=Site), size=1, na.rm = T) +  
+  scale_color_manual(values=c("firebrick")) +
+  theme_classic(base_size = 14) +
+  ylab("Estimated Chick Counts")
+
+plot1
+```
+
+If you need to recall any of the information used in model fitting (including to see what default values were used), you can check out model_data:
+
+```{r}
+mod_anmu$model_data
+```
+
+
+## Some Examples
+
+### Site Covariates
+
+```{r, eval=FALSE}
+dat = anmu[1:3,1:6] # three sites, six sampling occasions
+measure1 = c(0.12, 0.32, 0.13) # some data collected per site
+
+# minimal example (indicator variables)
+# with site 3 lambda differing from sites 1 and 2:
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   l_s_c = list(site3=c(0,0,1)))
+
+# minimal example (indicator variables)
+# with lambda differing for all three sites:
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   l_s_c = list(site2=c(0,1,0), site3=c(0,0,1)))
+
+# minimal example (continuous covariate)
+# with lambda depending on measure1:
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   l_s_c = list(cov1=measure1))
+
+# minimal example (several covariates)
+# with lambda depending on site,
+# with gamma and omega depending on measure1,
+# with detection probability depending on site:
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   l_s_c = list(site2=c(0,1,0), site3=c(0,0,1)),
+                   g_s_c = list(cov1=measure1),
+                   o_s_c = list(cov1=measure1),
+                   p_s_c = list(site2=c(0,1,0), site3=c(0,0,1)))
+```
+
+### Time Covariates
+
+```{r, eval=FALSE}
+dat = anmu[1:3,1:6] # two sites, six sampling occasions
+measure2 = c(-0.959,0.710,0.317,0.041,1.624,-0.571,0.464) # some data collected per year
+
+# minimal example (indicator variables)
+# with gamma differing years 3 and 5:
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   g_t_c = list(years3and6=c(0,0,1,0,1,0)))
+
+# minimal example (continuous covariate)
+# with omega depending on measure2:
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   o_t_c = list(cov2=measure2))
+```
+
+### Checkpointing
+
+```{r, eval=FALSE}
+# minimal example (saving checkpoint file)
+mod_anmu = fitNmix(nit = dat, 
+                   K = 300,
+                   outfile = "checkpoint.csv")
+```
+
+### Some Warnings
+
+- Asymptotic models can have convergence issues when gamma = 0, be wary of results when the gamma estimate is very small
+- Parallel processing is currently only implemented to split the transition probability matrix computation by rows, and this is only efficient for large $K$
+- Asymptotic models are much faster to compute for large $K$ than the standard N-mixture models, however the computing time still grows proportional to $K^2$, so expect model fitting to take a while for larger populations
+
+## Conclusions
+
+The R package [quickNmix](https://CRAN.R-project.org/package=quickNmix) provides a quick and easy interface for fitting asymptotic N-mixture models, allowing the use of parameter covariates which can be site or time varying. The package also allows for easy parallel processing when multiple cores are available.
+
+
+
+
