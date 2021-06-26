@@ -2,8 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-blogdown/
 Thumbs.db
-public/
+/public/
+/resources/
 matthew-parker.Rproj
 *.gz
+.DS_Store
