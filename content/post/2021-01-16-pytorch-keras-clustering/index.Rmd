@@ -373,6 +373,8 @@ After all of this preparation, we are finally ready to try clustering the data. 
 First step, we need to decide how many clusters to use! We will use the elbow method, as in [this K-means tutorial](https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f):
 
 ```{python eval=F, python.reticulate=F}
+encoded_items = encoder_model(p_items)
+
 # choose number of clusters K:
 Sum_of_squared_distances = []
 K = range(1,30)

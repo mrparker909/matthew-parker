@@ -25,7 +25,7 @@ image:
 disable_codefolding: no
 ---
 
-<script src="index_files/header-attrs/header-attrs.js"></script>
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
 
 
 <p>Neural Networks are an immensely useful class of machine learning model, with countless applications. Today we are going to analyze a data set and see if we can gain new insights by applying unsupervised clustering techniques to find patterns and hidden groupings within the data.</p>
@@ -172,7 +172,7 @@ preprocessing_layer = tf.keras.Model(inputs, preprocessed_inputs_cat, name=&quot
 tf.keras.utils.plot_model(model=preprocessing_layer, rankdir=&quot;LR&quot;, dpi=130, show_shapes=True, to_file=&quot;processing.png&quot;)</code></pre>
 <p>Here you can see the results of our processing model, starting with inputs for each of the columns of interest, and ending in a single feature vector:</p>
 <div class="figure"><span id="fig:unnamed-chunk-10"></span>
-<img src="img/processing.png" alt="Graph visualization of data preprocessing layers."  />
+<img src="img/processing.png" alt="Graph visualization of data preprocessing layers." width="847" />
 <p class="caption">
 Figure 2: Graph visualization of data preprocessing layers.
 </p>
@@ -238,7 +238,7 @@ autoencoder_model.compile(optimizer=&quot;RMSprop&quot;, loss=tf.keras.losses.me
 tf.keras.utils.plot_model(model=autoencoder_model, rankdir=&quot;LR&quot;, dpi=130, show_shapes=True, to_file=&quot;autoencoder.png&quot;)</code></pre>
 <p>The autoencoder layer of the model looks like this:</p>
 <div class="figure"><span id="fig:unnamed-chunk-14"></span>
-<img src="img/autoencoder.png" alt="Graph visualization of autoencoder layers."  />
+<img src="img/autoencoder.png" alt="Graph visualization of autoencoder layers." width="966" />
 <p class="caption">
 Figure 3: Graph visualization of autoencoder layers.
 </p>
@@ -266,7 +266,7 @@ ax2.plot(range(0,1000), np.log10(history.history[&#39;val_loss&#39;]), color=&#3
 ax2.set(ylabel=&#39;log_10(loss)&#39;, xlabel=&#39;Training Epoch&#39;)
 history_fig</code></pre>
 <div class="figure"><span id="fig:unnamed-chunk-17"></span>
-<img src="img/training_history.png" alt="Autoencoder model training history. Training is in blue, validation is in red."  />
+<img src="img/training_history.png" alt="Autoencoder model training history. Training is in blue, validation is in red." width="438" />
 <p class="caption">
 Figure 4: Autoencoder model training history. Training is in blue, validation is in red.
 </p>
@@ -292,7 +292,9 @@ Figure 6: How does average user rating impact the encoding?
 <h3>Step 6: Clustering</h3>
 <p>After all of this preparation, we are finally ready to try clustering the data. There are a vast number of methods for clustering. We will use <a href="https://en.wikipedia.org/wiki/K-means_clustering">K-means</a> as one of the simplest clustering methods. We aren’t just clustering the raw data, we are using the autoencoder representation of the data so as to reduce the dimensionality of the problem from 732 dimensions all the way down to 3 dimensions.</p>
 <p>First step, we need to decide how many clusters to use! We will use the elbow method, as in <a href="https://blog.cambridgespark.com/how-to-determine-the-optimal-number-of-clusters-for-k-means-clustering-14f27070048f">this K-means tutorial</a>:</p>
-<pre class="python"><code># choose number of clusters K:
+<pre class="python"><code>encoded_items = encoder_model(p_items)
+
+# choose number of clusters K:
 Sum_of_squared_distances = []
 K = range(1,30)
 for k in K:
@@ -308,7 +310,7 @@ plt.ylabel(&#39;Sum of squared distances&#39;)
 plt.title(&#39;Elbow Method For Optimal K&#39;)
 plt.show()</code></pre>
 <div class="figure"><span id="fig:unnamed-chunk-21"></span>
-<img src="img/elbow_plot.png" alt="Elbow plot for choosing optimal K in K-means."  />
+<img src="img/elbow_plot.png" alt="Elbow plot for choosing optimal K in K-means." width="461" />
 <p class="caption">
 Figure 7: Elbow plot for choosing optimal K in K-means.
 </p>
