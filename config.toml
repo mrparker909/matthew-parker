@@ -16,7 +16,7 @@ baseurl = "https://matthew-parker.rbind.io/"
 copyright = ""
 
 # Enable analytics by entering your Google Analytics tracking ID
-googleAnalytics = "UA-160837290-1"
+googleAnalytics = "G-L0KW86DET9" #"UA-160837290-1"
 
 ############################
 ## Advanced options below ##
